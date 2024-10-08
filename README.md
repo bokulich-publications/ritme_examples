@@ -20,7 +20,7 @@ vdb-config -i
 
 ## Contact
 
-In case of questions or comments feel free to raise an issue in this repository. 
+In case of questions or comments feel free to raise an issue in this repository.
 
 
 ## License
