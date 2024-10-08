@@ -97,3 +97,28 @@ def _fetch_all_supp_material(path2data, url):
         _fetching_programmatically_not_allowed(url, filedest_all)
 
     return filedest_all
+
+
+def save_file(df_md, path2data, tag):
+    path2md = os.path.join(path2data, "metadata.qza")
+    path2md_proc = path2md.replace(".qza", f"_proc_v{tag}.tsv")
+
+    print(f"Saved processed metadata to: {path2md_proc}")
+    df_md.to_csv(path2md_proc, sep="\t")
+
+    # save unique runIDs of each projectIDs from this metadata file for sequence
+    # fetching in d_
+    unique_ids = df_md["bioproject_id"].unique()
+    path2runids = os.path.join(path2data, "runids")
+    if not os.path.exists(path2runids):
+        os.makedirs(path2runids)
+
+    for id in unique_ids:
+        run_ids = df_md[df_md["bioproject_id"] == id].index.tolist()
+        df_run_ids = pd.DataFrame({"id": run_ids}).squeeze()
+
+        path2ids = os.path.join(path2runids, f"{id}.tsv")
+        print(f"Saved unique project IDs to: {path2ids}")
+        df_run_ids.to_csv(path2ids, sep="\t", index=False)
+
+    return path2md_proc
