@@ -33,8 +33,8 @@ else
 fi
 
 # cluster
-if [ -f "$1/otu_table_subramanian14.qza" ]; then
-    echo "$1/otu_table_subramanian14.qza found - not clustering again"
+if [ -f "$1/otu_table_subr14.qza" ]; then
+    echo "$1/otu_table_subr14.qza found - not clustering again"
 else
     echo "Clustering sequences ..."
     qiime vsearch cluster-features-open-reference \
@@ -43,7 +43,7 @@ else
         --i-reference-sequences "$1/gg_13_8_99_otus.qza" \
         --p-perc-identity 0.97 \
         --p-threads $2 \
-        --o-clustered-table "$1/otu_table_subramanian14.qza" \
-        --o-clustered-sequences "$1/otu_seq_subramanian14.qza" \
-        --o-new-reference-sequences "$1/otu_seq_subramanian14_new_ref.qza"
+        --o-clustered-table "$1/otu_table_subr14.qza" \
+        --o-clustered-sequences "$1/otu_seq_subr14.qza" \
+        --o-new-reference-sequences "$1/otu_seq_subr14_new_ref.qza"
 fi
