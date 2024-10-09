@@ -317,4 +317,7 @@ def _postprocess_all_metadata(df_md):
     # included 0.5- and fully 1.0 rounded age in months for all studies
     df_md["age_months_rounded05"] = (df_md["age_days"] / DAYS_PER_MONTH * 2).round() / 2
     df_md["age_months_rounded1"] = (df_md["age_days"] / DAYS_PER_MONTH).round()
+
+    # add study_name
+    df_md["study_name"] = "subramanian14"
     return df_md
