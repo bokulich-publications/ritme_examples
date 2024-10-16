@@ -21,25 +21,14 @@ else
     rm -r "$1/gg_13_8_otus.tar.gz"
 fi
 
-# dereplicate
-if [ -f "$1/subr14_seqs_derep.qza" ]; then
-    echo "$1/subr14_seqs_derep.qza found - not dereplicating again"
-else
-    echo "Dereplicating sequences ..."
-    qiime vsearch dereplicate-sequences \
-        --i-sequences "$1/trimmed_subramanian14.qza" \
-        --o-dereplicated-sequences "$1/subr14_seqs_derep.qza" \
-        --o-dereplicated-table "$1/subr14_table_derep.qza"
-fi
-
 # cluster
 if [ -f "$1/otu_table_subr14.qza" ]; then
     echo "$1/otu_table_subr14.qza found - not clustering again"
 else
     echo "Clustering sequences ..."
     qiime vsearch cluster-features-open-reference \
-        --i-table "$1/subr14_table_derep.qza" \
-        --i-sequences "$1/subr14_seqs_derep.qza" \
+        --i-table "$1/asv_subramanian14.qza" \
+        --i-sequences "$1/repseq_subramanian14.qza" \
         --i-reference-sequences "$1/gg_13_8_99_otus.qza" \
         --p-perc-identity 0.97 \
         --p-threads $2 \

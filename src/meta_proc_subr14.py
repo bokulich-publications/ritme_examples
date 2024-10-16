@@ -320,4 +320,5 @@ def _postprocess_all_metadata(df_md):
 
     # add study_name
     df_md["study_name"] = "subramanian14"
+    df_md["study_cohort_name"] = "subramanian14"
     return df_md

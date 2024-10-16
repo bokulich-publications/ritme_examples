@@ -19,6 +19,7 @@ dependencies:
   - q2-dada2
   - q2-demux
   - q2-cutadapt
+  - q2-quality-filter
   - q2-vsearch
   - rescript
   - isort

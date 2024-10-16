@@ -12,6 +12,11 @@ def fetch_sequences(n_threads, path_to_data):
     subprocess.run(command, shell=True)
 
 
+def cluster_wq_sequences(n_threads, path_to_data):
+    command = f"../src/cluster_wq_sequences.sh {path_to_data} {n_threads}"
+    subprocess.run(command, shell=True)
+
+
 def cluster_sequences(n_threads, path_to_data):
     command = f"../src/cluster_sequences.sh {path_to_data} {n_threads}"
     subprocess.run(command, shell=True)
