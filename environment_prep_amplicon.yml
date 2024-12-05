@@ -1,6 +1,7 @@
-name: ritme_examples
+name: ritme_examples_prep_amplicon
 channels:
   - https://packages.qiime2.org/qiime2/2024.5/amplicon/released/
+  - https://packages.qiime2.org/qiime2/2024.5/metagenome/released/
   - conda-forge
   - bioconda
   - defaults
@@ -14,10 +15,12 @@ dependencies:
   - q2-diversity
   - q2-feature-classifier
   - q2-feature-table
+  - q2-fragment-insertion
   - q2-metadata
   - q2-phylogeny
   - q2-dada2
   - q2-demux
+  - q2-fondue
   - q2-cutadapt
   - q2-quality-filter
   - q2-vsearch

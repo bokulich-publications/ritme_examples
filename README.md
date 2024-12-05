@@ -2,21 +2,7 @@
 This repos contains fully reproducible workflows to reproduce the use cases accompanying the ritme publication.
 
 ## Setup
-To run the notebooks in `use_cases` we suggest you set up a conda environment as follows:
-
-* Install [mamba](https://github.com/mamba-org/mamba)
-* Create and activate a conda environment with the required dependencies:
-```shell
-mamba env create -f environment.yml
-conda activate ritme_examples
-conda install -c https://packages.qiime2.org/qiime2/2024.5/metagenome/released/ -c conda-forge -c bioconda -c defaults q2-fondue -y
-pip install -e .
-qiime dev refresh-cache
-```
-* Run the `vdb-config` tool and exit by pressing x (needed to initialize the wrapped SRA Toolkit for more information see [here](https://github.com/ncbi/sra-tools/wiki/05.-Toolkit-Configuration))
-```shell
-vdb-config -i
-```
+Each use case has different dependencies - you can find the instructions to set up the necessary conda environments at the start of each notebook.
 
 ## Contact
 

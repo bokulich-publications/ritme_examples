@@ -44,3 +44,13 @@ def rarefy_sequences_w_fixed_seed(path_to_otu, seed):
         seed=seed,
     )
     return table_subsampled
+
+
+def create_phylogeny(n_threads, path_to_data):
+    command = f"../src/create_phylogeny.sh {path_to_data} {n_threads}"
+    subprocess.run(command, shell=True)
+
+
+def create_taxonomy(path_to_data):
+    command = f"../src/create_taxonomy.sh {path_to_data}"
+    subprocess.run(command, shell=True)
