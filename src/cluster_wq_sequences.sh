@@ -5,7 +5,7 @@ if [ -f "$1/gg_13_8_99_otus.qza" ]; then
     echo "$1/gg_13_8_99_otus.qza found - not fetching again"
 else
     echo "Fetching Greengenes reference ..."
-    curl -o "$1/gg_13_8_otus.tar.gz" \
+    curl -L -o "$1/gg_13_8_otus.tar.gz" \
         https://data.qiime2.org/classifiers/greengenes/gg_13_8_otus.tar.gz
 
     tar -xzf "$1/gg_13_8_otus.tar.gz" -C "$1"
