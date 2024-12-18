@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name="test_u1_rf_mlflow"
+#SBATCH --job-name="u1_rf_config"
 #SBATCH -A share_name
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=20
-#SBATCH --time=03:59:59
-#SBATCH --mem-per-cpu=2048
+#SBATCH --cpus-per-task=30
+#SBATCH --time=119:59:59
+#SBATCH --mem-per-cpu=3072
 #SBATCH --output="%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -19,8 +19,18 @@ echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
 # ! USER SETTINGS HERE
 # -> config file to use
 CONFIG="u1_rf_config.json"
-# Absolute path to the .env file
+# -> path to the metadata file
+PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
+# -> path to the feature table file
+PATH_FT="../../data/u1_subramanian14/otu_table_subr14_rar.tsv"
+# -> path to taxonomy file
+PATH_TAX="../../data/u1_subramanian14/taxonomy_subr14.qza"
+# -> path to phylogeny file
+PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
+# -> path to the .env file
 ENV_PATH="../../.env"
+# -> path to store model logs
+LOGS_DIR="u1_rf_best_model"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -30,7 +40,22 @@ ulimit -n 524288
 # # Load environment variables from .env
 export $(grep -v '^#' "$ENV_PATH" | xargs)
 
-python u1_n2_model_rf.py
+# # Python API version
+# python u1_n2_model_rf.py
+
+# # CLI version
+echo "Running split-train-test"
+ritme split-train-test data_splits $PATH_MD $PATH_FT host_id --train-size 0.8 --seed 12
+
+echo "Running find-best-model-config"
+ritme find-best-model-config $CONFIG data_splits/train_val.pkl --path-to-tax $PATH_TAX --path-to-tree-phylo $PATH_PHYLO --path-store-model-logs $LOGS_DIR
+
+echo "Running evaluate-tuned-models"
+# Read the value of "experiment_tag" from the config file 
+experiment_tag=$(python -c "import json, sys; print(json.load(open('$CONFIG'))['experiment_tag'])")
+
+ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" data_splits/train_val.pkl data_splits/test.pkl
+
 sstat -j $SLURM_JOB_ID
 
 # get elapsed time of job
