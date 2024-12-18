@@ -1,3 +1,4 @@
+from ritme.evaluate_tuned_models import evaluate_tuned_models
 from ritme.find_best_model_config import (
     _load_experiment_config,
     _load_phylogeny,
@@ -5,7 +6,6 @@ from ritme.find_best_model_config import (
     find_best_model_config,
 )
 from ritme.split_train_test import _load_data, split_train_test
-from ritme.evaluate_tuned_models import evaluate_tuned_models
 
 ######## USER INPUTS ########
 # set experiment configuration path
@@ -49,4 +49,4 @@ best_model_dict, path_to_exp = find_best_model_config(
 
 # ## Evaluate feature and model configuration used by original paper
 metrics = evaluate_tuned_models(best_model_dict, config, train_val, test)
-metrics
+print(metrics)

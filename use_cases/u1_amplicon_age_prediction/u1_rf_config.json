@@ -1,5 +1,5 @@
 {
-  "experiment_tag": "u1_rf_config",
+  "experiment_tag": "u1_rf_config_mlruns",
   "feature_prefix": "F",
   "ls_model_types": [
     "rf"
@@ -11,5 +11,5 @@
   "stratify_by_column": "host_id",
   "target": "age_months",
   "test_mode": true,
-  "tracking_uri": "wandb"
+  "tracking_uri": "mlruns"
 }

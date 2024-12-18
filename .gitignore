@@ -162,4 +162,7 @@ __pycache__/
 .ruff_cache/*
 
 # Project specific
+*.txt
 data/*
+# model logs of u1 amplicon usecase
+use_cases/u1_amplicon_age_prediction/u1_rf_best_model/*
