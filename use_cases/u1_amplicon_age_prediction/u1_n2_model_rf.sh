@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_rf_config"
+#SBATCH --job-name="u1_rf_config_all"
 #SBATCH -A share_name
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=30
@@ -18,11 +18,11 @@ echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="u1_rf_config.json"
+CONFIG="u1_rf_config_all.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
-PATH_FT="../../data/u1_subramanian14/otu_table_subr14_rar.tsv"
+PATH_FT="../../data/u1_subramanian14/otu_table_subr14_wq.qza"
 # -> path to taxonomy file
 PATH_TAX="../../data/u1_subramanian14/taxonomy_subr14.qza"
 # -> path to phylogeny file
@@ -30,7 +30,9 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="u1_rf_best_model"
+LOGS_DIR="u1_rf_best_model_all"
+# -> path to data splits
+PATH_DATA_SPLITS="data_splits_all"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -45,16 +47,16 @@ export $(grep -v '^#' "$ENV_PATH" | xargs)
 
 # # CLI version
 echo "Running split-train-test"
-ritme split-train-test data_splits $PATH_MD $PATH_FT host_id --train-size 0.8 --seed 12
+ritme split-train-test $PATH_DATA_SPLITS $PATH_MD $PATH_FT host_id --train-size 0.8 --seed 12
 
 echo "Running find-best-model-config"
-ritme find-best-model-config $CONFIG data_splits/train_val.pkl --path-to-tax $PATH_TAX --path-to-tree-phylo $PATH_PHYLO --path-store-model-logs $LOGS_DIR
+ritme find-best-model-config $CONFIG "${PATH_DATA_SPLITS}/train_val.pkl" --path-to-tax $PATH_TAX --path-to-tree-phylo $PATH_PHYLO --path-store-model-logs $LOGS_DIR
 
 echo "Running evaluate-tuned-models"
-# Read the value of "experiment_tag" from the config file 
+# Read the value of "experiment_tag" from the config file
 experiment_tag=$(python -c "import json, sys; print(json.load(open('$CONFIG'))['experiment_tag'])")
 
-ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" data_splits/train_val.pkl data_splits/test.pkl
+ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" "${PATH_DATA_SPLITS}/train_val.pkl "${PATH_DATA_SPLITS}/test.pkl
 
 sstat -j $SLURM_JOB_ID
 
