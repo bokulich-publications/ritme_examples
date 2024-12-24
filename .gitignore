@@ -166,9 +166,9 @@ __pycache__/
 data/*
 use_cases/data/*
 # data splits
-use_cases/u1_amplicon_age_prediction/data_splits/*
+use_cases/u1_amplicon_age_prediction/data_splits*/*
 # model logs of u1 amplicon usecase
-use_cases/u1_amplicon_age_prediction/u1_rf_best_model/*
+use_cases/u1_amplicon_age_prediction/u1_rf_best_model*/*
 
 # any personal scratch files or folders
 x_*

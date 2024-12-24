@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="u1_rf_best_model_all_w_nest"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u1_rf_best_model_all_w_nest"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_all_w_nest"
 
@@ -56,7 +56,7 @@ echo "Running evaluate-tuned-models"
 # Read the value of "experiment_tag" from the config file
 experiment_tag=$(python -c "import json, sys; print(json.load(open('$CONFIG'))['experiment_tag'])")
 
-ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" "${PATH_DATA_SPLITS}/train_val.pkl "${PATH_DATA_SPLITS}/test.pkl
+ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" "${PATH_DATA_SPLITS}/train_val.pkl" "${PATH_DATA_SPLITS}/test.pkl"
 
 sstat -j $SLURM_JOB_ID
 
