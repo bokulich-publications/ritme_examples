@@ -6,24 +6,24 @@ import qiime2
 
 def fetch_sequences(n_threads, path_to_data):
     command = (
-        f"../src/fetch_sequences.sh {path_to_data}/runids "
+        f"../../src/fetch_sequences.sh {path_to_data}/runids "
         f"{path_to_data}  {n_threads}"
     )
     subprocess.run(command, shell=True)
 
 
 def cluster_wq_sequences(n_threads, path_to_data):
-    command = f"../src/cluster_wq_sequences.sh {path_to_data} {n_threads}"
+    command = f"../../src/cluster_wq_sequences.sh {path_to_data} {n_threads}"
     subprocess.run(command, shell=True)
 
 
 def cluster_sequences(n_threads, path_to_data):
-    command = f"../src/cluster_sequences.sh {path_to_data} {n_threads}"
+    command = f"../../src/cluster_sequences.sh {path_to_data} {n_threads}"
     subprocess.run(command, shell=True)
 
 
 def filter_sequences(path_to_data, min_prevalence):
-    command = f"../src/filter_sequences.sh {path_to_data} {min_prevalence}"
+    command = f"../../src/filter_sequences.sh {path_to_data} {min_prevalence}"
     subprocess.run(command, shell=True)
 
 
@@ -47,12 +47,12 @@ def rarefy_sequences_w_fixed_seed(path_to_otu, seed):
 
 
 def create_phylogeny(n_threads, path_to_data):
-    command = f"../src/create_phylogeny.sh {path_to_data} {n_threads}"
+    command = f"../../src/create_phylogeny.sh {path_to_data} {n_threads}"
     subprocess.run(command, shell=True)
 
 
 def create_taxonomy(path_to_data):
-    command = f"../src/create_taxonomy.sh {path_to_data}"
+    command = f"../../src/create_taxonomy.sh {path_to_data}"
     subprocess.run(command, shell=True)
 
 
