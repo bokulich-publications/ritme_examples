@@ -11,7 +11,7 @@
     "rf"
   ],
   "max_cuncurrent_trials": 20,
-  "num_trials": 900,
+  "num_trials": 150,
   "seed_data": 12,
   "seed_model": 12,
   "stratify_by_column": "host_id",
