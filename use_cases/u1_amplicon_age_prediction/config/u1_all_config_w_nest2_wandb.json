@@ -1,0 +1,30 @@
+{
+  "experiment_tag": "u1_all_config_w_nest2_wandb",
+  "feature_prefix": "F",
+  "ls_model_types": [
+    "linreg",
+    "trac",
+    "xgb",
+    "nn_reg",
+    "nn_class",
+    "nn_corn",
+    "rf"
+  ],
+  "max_cuncurrent_trials": 20,
+  "num_trials": 150,
+  "seed_data": 12,
+  "seed_model": 12,
+  "stratify_by_column": "host_id",
+  "target": "age_months",
+  "test_mode": false,
+  "tracking_uri": "wandb",
+  "model_hyperparameters": {
+    "rf": {
+      "n_estimators": {
+        "max": 20000,
+        "min": 5000,
+        "step": 1000
+      }
+    }
+  }
+}

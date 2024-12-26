@@ -34,7 +34,7 @@ for file in "$1"/*.tsv; do
   rm -r "$1/$projectid.qza"
 
   # check that failed_reads are empty
-  refetch=$(python ../src/need2refetch.py "$2/$projectid")
+  refetch=$(python ../../src/need2refetch.py "$2/$projectid")
   if [[ "$refetch" == "True" ]];
     then
       echo "Refetching failed_runs for $projectid ..."
