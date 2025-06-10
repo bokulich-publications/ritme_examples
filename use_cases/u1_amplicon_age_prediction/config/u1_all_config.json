@@ -1,6 +1,6 @@
 {
-  "experiment_tag": "u1_all_config_w_nest2",
-  "feature_prefix": "F",
+  "experiment_tag": "u1_all_config",
+  "group_by_column": "host_id",
   "ls_model_types": [
     "linreg",
     "trac",
@@ -11,13 +11,6 @@
     "rf"
   ],
   "max_cuncurrent_trials": 20,
-  "num_trials": 150,
-  "seed_data": 12,
-  "seed_model": 12,
-  "stratify_by_column": "host_id",
-  "target": "age_months",
-  "test_mode": false,
-  "tracking_uri": "mlruns",
   "model_hyperparameters": {
     "rf": {
       "n_estimators": {
@@ -26,5 +19,10 @@
         "step": 1000
       }
     }
-  }
+  },
+  "num_trials": 200,
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "age_months",
+  "tracking_uri": "mlruns"
 }

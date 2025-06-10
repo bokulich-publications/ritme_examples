@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_all_config_w_nest2"
+#SBATCH --job-name="u1_all_config"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=50
@@ -18,7 +18,7 @@ echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_all_config_w_nest2.json"
+CONFIG="config/u1_all_config.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
@@ -30,9 +30,9 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u1_all_config_w_nest2"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u1_all_best_model"
 # -> path to data splits
-PATH_DATA_SPLITS="data_splits_all_w_nest2"
+PATH_DATA_SPLITS="data_splits_u1"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
