@@ -10,7 +10,7 @@
     "nn_corn",
     "rf"
   ],
-  "max_cuncurrent_trials": 20,
+  "max_cuncurrent_trials": 15,
   "model_hyperparameters": {
     "rf": {
       "n_estimators": {
