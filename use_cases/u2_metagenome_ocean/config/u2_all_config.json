@@ -1,0 +1,19 @@
+{
+  "experiment_tag": "u2_all_config",
+  "group_by_column": "ocean_basin",
+  "ls_model_types": [
+    "linreg",
+    "trac",
+    "xgb",
+    "nn_reg",
+    "nn_class",
+    "nn_corn",
+    "rf"
+  ],
+  "max_cuncurrent_trials": 15,
+  "num_trials": 200,
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "temperature_mean_degc",
+  "tracking_uri": "mlruns"
+}
