@@ -1,20 +1,20 @@
 #!/bin/bash
 
-# #SBATCH --job-name="u2_enet_config"
-# #SBATCH -A es_bokulich
-# #SBATCH --nodes=1
-# #SBATCH --cpus-per-task=50
-# #SBATCH --time=119:59:59
-# #SBATCH --mem-per-cpu=14336
-# #SBATCH --output="%x_out.txt"
-# #SBATCH --open-mode=append
+#SBATCH --job-name="u2_enet_config"
+#SBATCH -A es_bokulich
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=50
+#SBATCH --time=119:59:59
+#SBATCH --mem-per-cpu=14336
+#SBATCH --output="%x_out.txt"
+#SBATCH --open-mode=append
 
-# module load eth_proxy
+module load eth_proxy
 
-# set -x
+set -x
 
-# echo "SLURM_CPUS_PER_TASK: $SLURM_CPUS_PER_TASK"
-# echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
+echo "SLURM_CPUS_PER_TASK: $SLURM_CPUS_PER_TASK"
+echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
 
 # ! USER SETTINGS HERE
 # -> config file to use
@@ -30,16 +30,15 @@ PATH_PHYLO="../../data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-# LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u2_enet_best_model"
-LOGS_DIR="u2_enet_best_model"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u2_enet_best_model"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u2"
 # -> group columns for train-test split
 GROUP_BY_COLUMN="ocean_basin"
 
-# # if your number of threads are limited increase as needed
-# ulimit -u 60000
-# ulimit -n 524288
+# if your number of threads are limited increase as needed
+ulimit -u 60000
+ulimit -n 524288
 # ! USER END __________
 
 # # Load environment variables from .env
