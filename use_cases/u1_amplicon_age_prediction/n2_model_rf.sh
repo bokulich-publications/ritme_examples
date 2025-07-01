@@ -33,6 +33,8 @@ ENV_PATH="../../.env"
 LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u1_rf_best_model"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u1"
+# -> group columns for train-test split
+GROUP_BY_COLUMN="host_id"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -47,7 +49,7 @@ export $(grep -v '^#' "$ENV_PATH" | xargs)
 
 # # CLI version
 echo "Running split-train-test"
-ritme split-train-test $PATH_DATA_SPLITS $PATH_MD $PATH_FT --group-by-column host_id --train-size 0.8 --seed 12
+ritme split-train-test $PATH_DATA_SPLITS $PATH_MD $PATH_FT --group-by-column $GROUP_BY_COLUMN --train-size 0.8 --seed 12
 
 echo "Running find-best-model-config"
 ritme find-best-model-config $CONFIG "${PATH_DATA_SPLITS}/train_val.pkl" --path-to-tax $PATH_TAX --path-to-tree-phylo $PATH_PHYLO --path-store-model-logs $LOGS_DIR

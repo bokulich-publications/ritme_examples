@@ -54,3 +54,8 @@ def create_phylogeny(n_threads, path_to_data):
 def create_taxonomy(path_to_data):
     command = f"../../src/create_taxonomy.sh {path_to_data}"
     subprocess.run(command, shell=True)
+
+
+def fetch_mitag_otus(destination_folder, url):
+    command = f"../../src/fetch_mitag_otus.sh {destination_folder} {url}"
+    subprocess.run(command, shell=True)

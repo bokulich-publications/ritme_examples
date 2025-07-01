@@ -1,6 +1,7 @@
 """Functions to fetch metadata"""
 
 import os
+import subprocess
 from typing import Tuple
 
 import pandas as pd
@@ -122,3 +123,8 @@ def save_file(df_md, path2data, tag):
         df_run_ids.to_csv(path2ids, sep="\t", index=False)
 
     return path2md_proc
+
+
+def fetch_mitag_metadata(destination_folder, url):
+    command = f"../../src/fetch_mitag_md.sh {destination_folder} {url}"
+    subprocess.run(command, shell=True)
