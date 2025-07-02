@@ -3,9 +3,9 @@
 #SBATCH --job-name="u2_enet_config"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=20
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=14336
+#SBATCH --mem-per-cpu=3072
 #SBATCH --output="%x_out.txt"
 #SBATCH --open-mode=append
 
