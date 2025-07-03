@@ -1,5 +1,6 @@
 {
   "experiment_tag": "u2_all_config",
+  "fully_reproducible": false,
   "group_by_column": "ocean_basin",
   "ls_model_types": [
     "linreg",

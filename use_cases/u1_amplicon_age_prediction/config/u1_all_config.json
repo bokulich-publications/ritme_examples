@@ -1,5 +1,6 @@
 {
   "experiment_tag": "u1_all_config",
+  "fully_reproducible": false,
   "group_by_column": "host_id",
   "ls_model_types": [
     "linreg",
