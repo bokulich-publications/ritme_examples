@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_rf_config"
+#SBATCH --job-name="u2_enet_config_wandb"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=30
+#SBATCH --cpus-per-task=20
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=3072
 #SBATCH --output="%x_out.txt"
@@ -14,27 +14,27 @@ module load eth_proxy
 set -x
 
 echo "SLURM_CPUS_PER_TASK: $SLURM_CPUS_PER_TASK"
-echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
+echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_rf_config.json"
+CONFIG="config/u2_enet_config_wandb.json"
 # -> path to the metadata file
-PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
+PATH_MD="../../data/u2_tara_ocean/md_tara_ocean.tsv"
 # -> path to the feature table file
-PATH_FT="../../data/u1_subramanian14/otu_table_subr14_wq.qza"
+PATH_FT="../../data/u2_tara_ocean/otu_table_tara_ocean.tsv"
 # -> path to taxonomy file
-PATH_TAX="../../data/u1_subramanian14/taxonomy_subr14.qza"
+PATH_TAX="../../data/u2_tara_ocean/taxonomy_tara_ocean.qza"
 # -> path to phylogeny file
-PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
+PATH_PHYLO="../../data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u1_rf_best_model"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u2_enet_best_model_wandb"
 # -> path to data splits
-PATH_DATA_SPLITS="data_splits_u1"
+PATH_DATA_SPLITS="data_splits_u2"
 # -> group columns for train-test split
-GROUP_BY_COLUMN="host_id"
+GROUP_BY_COLUMN="ocean_basin"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -43,9 +43,6 @@ ulimit -n 524288
 
 # # Load environment variables from .env
 export $(grep -v '^#' "$ENV_PATH" | xargs)
-
-# # Python API version
-# python u1_n2_model_rf.py
 
 # # CLI version
 echo "Running split-train-test"
@@ -60,8 +57,8 @@ experiment_tag=$(python -c "import json, sys; print(json.load(open('$CONFIG'))['
 
 ritme evaluate-tuned-models "${LOGS_DIR}/${experiment_tag}" "${PATH_DATA_SPLITS}/train_val.pkl" "${PATH_DATA_SPLITS}/test.pkl"
 
-sstat -j $SLURM_JOB_ID
+# sstat -j $SLURM_JOB_ID
 
-# get elapsed time of job
-echo "TIME COUNTER:"
-sacct -j $SLURM_JOB_ID --format=elapsed --allocations
+# # get elapsed time of job
+# echo "TIME COUNTER:"
+# sacct -j $SLURM_JOB_ID --format=elapsed --allocations

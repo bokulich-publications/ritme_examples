@@ -14,7 +14,7 @@ module load eth_proxy
 set -x
 
 echo "SLURM_CPUS_PER_TASK: $SLURM_CPUS_PER_TASK"
-echo "SLURM_GPUS_PER_TASK: $SLURM_GPUS_PER_TASK"
+echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
