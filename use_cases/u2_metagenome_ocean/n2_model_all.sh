@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_example_runs/u2_all_best_model"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u2"
 # -> group columns for train-test split
