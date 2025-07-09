@@ -11,7 +11,7 @@
     "nn_corn",
     "rf"
   ],
-  "max_cuncurrent_trials": 15,
+  "max_cuncurrent_trials": 30,
   "num_trials": 900,
   "seed_data": 12,
   "seed_model": 12,
