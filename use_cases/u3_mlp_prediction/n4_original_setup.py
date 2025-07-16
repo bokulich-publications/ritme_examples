@@ -1,5 +1,6 @@
 import argparse
 
+import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr
 from sklearn.metrics import r2_score, root_mean_squared_error
@@ -9,7 +10,14 @@ from xgboost import XGBRegressor
 from src.process_u3 import preprocess_data_for_model
 
 
-def main(cohort: str):
+def shannon_diversity(df, eps=1e-9):
+    # 1) compute proportions per sample
+    p = df.div(df.sum(axis=1), axis=0)
+    # 2) Shannon index
+    return -(p * np.log(p + eps)).sum(axis=1)
+
+
+def main(cohort: str, use_shannon: bool = False):
     # paths
     data_splits_folder = f"data_splits_u3_{cohort}"
     path_to_features = f"../../data/u3_mlp_nishijima24/{cohort}_otu_table.tsv"
@@ -25,6 +33,11 @@ def main(cohort: str):
     otu_df = pd.read_csv(path_to_features, sep="\t", index_col=0)
     md_df = pd.read_csv(path_to_md, sep="\t", index_col=0)
 
+    if use_shannon:
+        # add shannon diversity to otu_df
+        otu_df["shannon"] = shannon_diversity(otu_df)
+
+    # split train-test
     X_train = otu_df.loc[train_idx]
     y_train = md_df.loc[train_idx, "count_log10"]
 
@@ -94,6 +107,11 @@ if __name__ == "__main__":
         "cohort",
         choices=["galaxy", "metacardis"],
         help="Which cohort to run: 'galaxy' or 'metacardis'",
+    )
+    parser.add_argument(
+        "use_shannon",
+        type=bool,
+        help="Whether to add Shannon diversity to the features",
     )
     args = parser.parse_args()
     main(args.cohort)
