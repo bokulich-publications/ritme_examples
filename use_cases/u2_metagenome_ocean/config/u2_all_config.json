@@ -16,5 +16,13 @@
   "seed_data": 12,
   "seed_model": 12,
   "target": "temperature_mean_degc",
-  "tracking_uri": "mlruns"
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "sampling_depth_m",
+      "env_feature",
+      "latitude",
+      "longitude"
+    ]
+  }
 }

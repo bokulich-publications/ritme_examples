@@ -16,5 +16,13 @@
   "seed_data": 12,
   "seed_model": 12,
   "target": "age_months",
-  "tracking_uri": "mlruns"
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "health_status_at_sampling",
+      "diet_milk",
+      "diet_weaning",
+      "abx_7d_prior"
+    ]
+  }
 }

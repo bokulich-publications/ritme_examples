@@ -15,5 +15,10 @@
   "seed_data": 12,
   "seed_model": 12,
   "target": "count_log10",
-  "tracking_uri": "mlruns"
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "cohort"
+    ]
+  }
 }
