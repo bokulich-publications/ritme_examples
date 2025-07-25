@@ -168,12 +168,17 @@ use_cases/data/*
 # data splits
 use_cases/u1_amplicon_age_prediction/data_splits*/*
 use_cases/u2_metagenome_ocean/data_splits*/*
+use_cases/u3_mlp_prediction/data_splits*/*
 # model logs
 use_cases/u1_amplicon_age_prediction/u1_rf_best_model*/*
 use_cases/u1_amplicon_age_prediction/u1_all_best_model*/*
 use_cases/u2_metagenome_ocean/u2_enet_best_model*/*
 use_cases/u2_metagenome_ocean/u2_trac_best_model*/*
 use_cases/u2_metagenome_ocean/u2_all_best_model*/*
+use_cases/u3_mlp_prediction/u3_galaxy_best_model*/*
+use_cases/u3_mlp_prediction/u3_metacardis_best_model*/*
+use_cases/u3_mlp_prediction/n4_original_results_galaxy.csv
+use_cases/u3_mlp_prediction/n4_original_results_metacardis.csv
 use_cases/euler_logs/*
 
 # any personal scratch files or folders
