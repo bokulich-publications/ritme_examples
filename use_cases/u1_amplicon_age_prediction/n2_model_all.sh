@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=50
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=10240
+#SBATCH --mem-per-cpu=14848
 #SBATCH --output="%x_out.txt"
 #SBATCH --open-mode=append
 
