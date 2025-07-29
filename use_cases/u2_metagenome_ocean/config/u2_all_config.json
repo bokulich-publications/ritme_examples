@@ -4,12 +4,12 @@
   "group_by_column": "ocean_basin",
   "ls_model_types": [
     "linreg",
-    "trac",
     "xgb",
     "nn_reg",
     "nn_class",
     "nn_corn",
-    "rf"
+    "rf",
+    "trac"
   ],
   "max_cuncurrent_trials": 30,
   "num_trials": 900,
