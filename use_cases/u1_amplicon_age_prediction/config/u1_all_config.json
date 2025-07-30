@@ -12,7 +12,8 @@
     "trac"
   ],
   "max_cuncurrent_trials": 30,
-  "num_trials": 900,
+  "num_trials": 100,
+  "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
   "target": "age_months",
