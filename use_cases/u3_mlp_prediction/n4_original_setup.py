@@ -112,6 +112,7 @@ if __name__ == "__main__":
         "use_shannon",
         type=bool,
         help="Whether to add Shannon diversity to the features",
+        default=True,
     )
     args = parser.parse_args()
-    main(args.cohort)
+    main(args.cohort, args.use_shannon)
