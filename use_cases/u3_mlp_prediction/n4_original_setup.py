@@ -111,7 +111,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "use_shannon",
         type=bool,
-        help="Whether to add Shannon diversity to the features",
+        nargs="?",
+        help="Whether to add Shannon diversity to the features (default: True)",
         default=True,
     )
     args = parser.parse_args()
