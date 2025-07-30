@@ -3,9 +3,8 @@
 #SBATCH --job-name="u3_metacardis_gpu_config"
 #SBATCH -A es_bmlbb
 #SBATCH --gpus=1
-#SBATCH --gres=gpumem:5120m
 #SBATCH --cpus-per-task=50
-#SBATCH --mem-per-cpu=5129
+#SBATCH --mem-per-cpu=10240
 #SBATCH --time=24:00:00
 #SBATCH --output="%x_out.txt"
 #SBATCH --open-mode=append

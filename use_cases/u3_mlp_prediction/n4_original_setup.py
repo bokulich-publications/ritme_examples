@@ -17,7 +17,7 @@ def shannon_diversity(df, eps=1e-9):
     return -(p * np.log(p + eps)).sum(axis=1)
 
 
-def main(cohort: str, use_shannon: bool = False):
+def main(cohort: str, use_shannon: bool = True):
     # paths
     data_splits_folder = f"data_splits_u3_{cohort}"
     path_to_features = f"../../data/u3_mlp_nishijima24/{cohort}_otu_table.tsv"
