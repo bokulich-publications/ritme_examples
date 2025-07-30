@@ -3,9 +3,9 @@
 #SBATCH --job-name="u2_all_config_notrac"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=80
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=9216
+#SBATCH --mem-per-cpu=5120
 #SBATCH --output="%x_out.txt"
 #SBATCH --open-mode=append
 
