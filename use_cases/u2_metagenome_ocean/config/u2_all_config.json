@@ -1,7 +1,7 @@
 {
   "experiment_tag": "u2_all_config",
   "fully_reproducible": false,
-  "group_by_column": "ocean_basin",
+  "group_by_column": null,
   "ls_model_types": [
     "linreg",
     "xgb",
