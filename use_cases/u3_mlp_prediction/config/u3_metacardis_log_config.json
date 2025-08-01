@@ -1,5 +1,5 @@
 {
-  "experiment_tag": "u3_metacardis_gpu_config",
+  "experiment_tag": "u3_metacardis_log_config",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [

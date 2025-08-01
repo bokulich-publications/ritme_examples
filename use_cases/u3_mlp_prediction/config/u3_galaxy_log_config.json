@@ -1,5 +1,5 @@
 {
-  "experiment_tag": "u3_metacardis_config",
+  "experiment_tag": "u3_galaxy_config",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
@@ -15,7 +15,7 @@
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
-  "target": "count",
+  "target": "count_log10",
   "tracking_uri": "mlruns",
   "model_hyperparameters": {
     "data_enrich_with": [

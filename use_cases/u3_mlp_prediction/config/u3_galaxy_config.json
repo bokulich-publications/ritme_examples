@@ -15,7 +15,7 @@
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
-  "target": "count_log10",
+  "target": "count",
   "tracking_uri": "mlruns",
   "model_hyperparameters": {
     "data_enrich_with": [
