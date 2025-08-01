@@ -6,8 +6,6 @@
     "linreg",
     "xgb",
     "nn_reg",
-    "nn_class",
-    "nn_corn",
     "rf"
   ],
   "max_cuncurrent_trials": 30,
