@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="n4_original_galaxy"
+#SBATCH --job-name="n4_original_metacardis"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=20
@@ -12,7 +12,7 @@
 module load eth_proxy
 
 set -x
-python n4_original_setup.py galaxy
+python n4_original_setup.py metacardis count
 
 # get elapsed time of job
 sstat -j $SLURM_JOB_ID
