@@ -23,7 +23,10 @@ def shannon_diversity(df, eps=1e-9):
 
 def main(cohort: str, target: str, use_shannon: bool = True):
     # paths
-    data_splits_folder = f"data_splits_u3_{cohort}"
+    if target == "count_log10":
+        data_splits_folder = f"data_splits_u3_{cohort}_log"
+    else:
+        data_splits_folder = f"data_splits_u3_{cohort}"
     path_to_features = f"../../data/u3_mlp_nishijima24/{cohort}_otu_table.tsv"
     path_to_md = f"../../data/u3_mlp_nishijima24/md_{cohort}.tsv"
 
