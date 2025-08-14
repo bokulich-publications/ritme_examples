@@ -1,5 +1,5 @@
 {
-  "experiment_tag": "u2_all_config",
+  "experiment_tag": "u2_all_qmc",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
@@ -11,9 +11,9 @@
     "rf",
     "trac"
   ],
-  "max_cuncurrent_trials": 30,
+  "max_cuncurrent_trials": 50,
   "num_trials": 100,
-  "optuna_searchspace_sampler": "TPESampler",
+  "optuna_searchspace_sampler": "QMCSampler",
   "seed_data": 12,
   "seed_model": 12,
   "target": "temperature_mean_degc",
