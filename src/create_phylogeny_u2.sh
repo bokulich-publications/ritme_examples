@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-if [ -f "$1/fasttree_tree_rooted_suna15.qza" ]; then
-    echo "$1/fasttree_tree_rooted_suna15.qza found - not creating phylogeny again"
+if [ -f "$1/fasttree_tree_rooted_proc_suna15.qza" ]; then
+    echo "$1/fasttree_tree_rooted_proc_suna15.qza found - not creating phylogeny again"
 else
     echo "Fetching SILVA OTU reference sequences ..."
     curl -L -o "$1/sun15_silva_16s_otu_ref_seqs.fna.gz" \

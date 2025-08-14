@@ -1,13 +1,17 @@
 import argparse
+import os
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import pearsonr
-from sklearn.metrics import r2_score, root_mean_squared_error
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from xgboost import XGBRegressor
 
+from src.eval_originals import get_metrics_n_scatterplot
 from src.process_u3 import preprocess_data_for_model
+
+plt.rcParams.update({"font.family": "DejaVu Sans"})
+plt.style.use("seaborn-v0_8-pastel")
 
 
 def shannon_diversity(df, eps=1e-9):
@@ -17,9 +21,12 @@ def shannon_diversity(df, eps=1e-9):
     return -(p * np.log(p + eps)).sum(axis=1)
 
 
-def main(cohort: str, use_shannon: bool = False):
+def main(cohort: str, target: str, use_shannon: bool = True):
     # paths
-    data_splits_folder = f"data_splits_u3_{cohort}"
+    if target == "count_log10":
+        data_splits_folder = f"data_splits_u3_{cohort}_log"
+    else:
+        data_splits_folder = f"data_splits_u3_{cohort}"
     path_to_features = f"../../data/u3_mlp_nishijima24/{cohort}_otu_table.tsv"
     path_to_md = f"../../data/u3_mlp_nishijima24/md_{cohort}.tsv"
 
@@ -39,14 +46,16 @@ def main(cohort: str, use_shannon: bool = False):
 
     # split train-test
     X_train = otu_df.loc[train_idx]
-    y_train = md_df.loc[train_idx, "count_log10"]
+    y_train = md_df.loc[train_idx, target]
 
     X_test = otu_df.loc[test_idx]
-    y_test = md_df.loc[test_idx, "count_log10"]
+    y_test = md_df.loc[test_idx, target]
 
     # preprocess (filter, log, scale)
     X_train_scaled, feature_names, train_scaler = preprocess_data_for_model(X_train)
-    X_test_scaled = train_scaler.transform(X_test[feature_names])
+    # scaler is for log10 features:
+    X_test = np.log10(X_test[feature_names] + 1e-4)
+    X_test_scaled = train_scaler.transform(X_test)
 
     # hyper‐parameter grid + CV
     cv = RepeatedKFold(n_splits=10, n_repeats=1, random_state=0)
@@ -71,31 +80,24 @@ def main(cohort: str, use_shannon: bool = False):
     model.fit(X_train_scaled, y_train.values)
 
     # evaluate
-    train_preds = model.predict(X_train_scaled)
-    test_preds = model.predict(X_test_scaled)
-    train_r2 = r2_score(y_train, train_preds)
-    train_rmse = root_mean_squared_error(y_train, train_preds)
-    train_pearson = pearsonr(y_train, train_preds)[0]
+    metrics, fig = get_metrics_n_scatterplot(
+        model, X_train_scaled, y_train, X_test_scaled, y_test
+    )
 
-    test_r2 = r2_score(y_test, test_preds)
-    test_rmse = root_mean_squared_error(y_test, test_preds)
-    test_pearson = pearsonr(y_test, test_preds)[0]
+    # save metrics and scatter plot
+    path_to_save_results = os.path.join(
+        "n4_original_setup_results", f"{cohort}_{target}"
+    )
+    if not os.path.exists(path_to_save_results):
+        os.makedirs(path_to_save_results)
+    out_file = os.path.join(path_to_save_results, "metrics.csv")
+    metrics.to_csv(out_file, index=False)
+    print(f"Metrics written to {out_file}")
+    print(f"Metrics: {metrics}")
 
-    results = pd.DataFrame(
-        {
-            "R2 test": [test_r2],
-            "RMSE test": [test_rmse],
-            "Pearson test": [test_pearson],
-            "R2 train": [train_r2],
-            "RMSE train": [train_rmse],
-            "Pearson train": [train_pearson],
-        }
-    ).round(3)
-
-    out_file = f"n4_original_results_{cohort}.csv"
-    results.to_csv(out_file, index=False)
-    print(f"Results written to {out_file}")
-    print(results)
+    path_to_save = os.path.join(path_to_save_results, "best_true_vs_pred.png")
+    fig.savefig(path_to_save, bbox_inches="tight")
+    print(f"Scatter plots were saved in {path_to_save}.")
 
 
 if __name__ == "__main__":
@@ -109,9 +111,16 @@ if __name__ == "__main__":
         help="Which cohort to run: 'galaxy' or 'metacardis'",
     )
     parser.add_argument(
+        "target",
+        choices=["count", "count_log10"],
+        help="Which column to predict: 'count_log10' or 'count'",
+    )
+    parser.add_argument(
         "use_shannon",
         type=bool,
-        help="Whether to add Shannon diversity to the features",
+        nargs="?",
+        help="Whether to add Shannon diversity to the features (default: True)",
+        default=True,
     )
     args = parser.parse_args()
-    main(args.cohort)
+    main(args.cohort, args.target, args.use_shannon)

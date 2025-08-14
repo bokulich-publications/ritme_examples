@@ -12,3 +12,6 @@ In case of questions or comments feel free to raise an issue in this repository.
 ## License
 
 This repository  is released under a BSD-3-Clause license. See LICENSE for more details.
+
+## TODOs before public release of this repos
+- [ ] delete share information in all Euler slurm launch scripts `es_bokulich` or `es_bmlbb`

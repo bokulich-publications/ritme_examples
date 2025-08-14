@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name="u2_all_config"
+#SBATCH --job-name="u1_all_qmc"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=60
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=10240
-#SBATCH --output="%x_out.txt"
+#SBATCH --mem-per-cpu=14848
+#SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
@@ -18,23 +18,23 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u2_all_config.json"
+CONFIG="config/u1_all_qmc.json"
 # -> path to the metadata file
-PATH_MD="../../data/u2_tara_ocean/md_tara_ocean.tsv"
+PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
-PATH_FT="../../data/u2_tara_ocean/otu_table_tara_ocean.tsv"
+PATH_FT="../../data/u1_subramanian14/otu_table_subr14_wq.qza"
 # -> path to taxonomy file
-PATH_TAX="../../data/u2_tara_ocean/taxonomy_tara_ocean.qza"
+PATH_TAX="../../data/u1_subramanian14/taxonomy_subr14.qza"
 # -> path to phylogeny file
-PATH_PHYLO="../../data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.qza"
+PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
 LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs"
 # -> path to data splits
-PATH_DATA_SPLITS="data_splits_u2"
+PATH_DATA_SPLITS="data_splits_u1"
 # -> group columns for train-test split
-GROUP_BY_COLUMN="ocean_basin"
+GROUP_BY_COLUMN="host_id"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -43,6 +43,9 @@ ulimit -n 524288
 
 # # Load environment variables from .env
 export $(grep -v '^#' "$ENV_PATH" | xargs)
+
+# # Python API version
+# python u1_n2_model_rf.py
 
 # # CLI version
 echo "Running split-train-test"

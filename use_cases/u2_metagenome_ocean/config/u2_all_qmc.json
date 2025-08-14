@@ -1,0 +1,29 @@
+{
+  "experiment_tag": "u2_all_qmc",
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "ls_model_types": [
+    "linreg",
+    "xgb",
+    "nn_reg",
+    "nn_class",
+    "nn_corn",
+    "rf",
+    "trac"
+  ],
+  "max_cuncurrent_trials": 50,
+  "num_trials": 100,
+  "optuna_searchspace_sampler": "QMCSampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "temperature_mean_degc",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "sampling_depth_m",
+      "env_feature",
+      "latitude",
+      "longitude"
+    ]
+  }
+}

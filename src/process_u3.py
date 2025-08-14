@@ -15,16 +15,14 @@ def process_feature_table(path_to_data, filename):
 
 
 def preprocess_data_for_model(
-    abundance_df: pd.DataFrame, cutoff: float = 1e-4, pseudocount: float = 1e-4
+    df: pd.DataFrame, cutoff: float = 1e-4, pseudocount: float = 1e-4
 ):
     """
-    Filter low‐abundance species, log‐transform and scale features. According to
+    Filter low-abundance species, log-transform and scale features. According to
     original publication's R script in
     https://github.com/grp-bork/CellCount_Nishijima_2024/blob/main/construct_models.R
     """
-    # todo: add shannon diversity
-    df_with_div = abundance_df.copy()
-    # df_with_div['shannon_diversity'] = shannon_vals
+    df_with_div = df.copy()
 
     # filter minor species
     mean_abund = df_with_div.mean(axis=0)
