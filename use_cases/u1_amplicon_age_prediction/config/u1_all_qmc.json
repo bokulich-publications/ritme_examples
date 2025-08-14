@@ -12,7 +12,7 @@
     "trac"
   ],
   "max_cuncurrent_trials": 35,
-  "num_trials": 1000,
+  "num_trials": 100,
   "optuna_searchspace_sampler": "QMCSampler",
   "seed_data": 12,
   "seed_model": 12,
