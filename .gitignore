@@ -181,6 +181,7 @@ use_cases/u3_mlp_prediction/n4_original_results_galaxy.csv
 use_cases/u3_mlp_prediction/n4_original_results_metacardis.csv
 use_cases/u3_mlp_prediction/n4_original_setup_results
 use_cases/euler_logs/*
+use_cases/all_experiments_*
 
 # any personal scratch files or folders
 x_*
