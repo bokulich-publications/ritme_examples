@@ -11,7 +11,7 @@
     "rf",
     "trac"
   ],
-  "max_cuncurrent_trials": 50,
+  "max_cuncurrent_trials": 30,
   "num_trials": 100,
   "optuna_searchspace_sampler": "QMCSampler",
   "seed_data": 12,
