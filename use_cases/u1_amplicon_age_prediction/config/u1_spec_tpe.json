@@ -1,0 +1,39 @@
+{
+  "experiment_tag": "u1_spec_tpe",
+  "fully_reproducible": false,
+  "group_by_column": "host_id",
+  "ls_model_types": [
+    "rf"
+  ],
+  "max_cuncurrent_trials": 100,
+  "model_hyperparameters": {
+    "data_aggregation_options": [
+      null,
+      "tax_genus"
+    ],
+    "data_enrich_options": [
+      "shannon_and_metadata",
+      "metadata_only"
+    ],
+    "data_enrich_with": [
+      "health_status_at_sampling",
+      "diet_milk",
+      "diet_weaning",
+      "abx_7d_prior"
+    ],
+    "data_selection_options": [
+      "abundance_ith",
+      "variance_threshold"
+    ],
+    "data_transform_options": [
+      null,
+      "ilr"
+    ]
+  },
+  "num_trials": 20000,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "age_months",
+  "tracking_uri": "mlruns"
+}
