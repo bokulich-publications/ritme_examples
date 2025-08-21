@@ -5,7 +5,7 @@
   "ls_model_types": [
     "xgb"
   ],
-  "max_cuncurrent_trials": 400,
+  "max_cuncurrent_trials": 1000,
   "model_hyperparameters": {
     "data_aggregation_options": [
       null,
@@ -27,7 +27,7 @@
       null
     ]
   },
-  "num_trials": 20000,
+  "num_trials": 10000,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,

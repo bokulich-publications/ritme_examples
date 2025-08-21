@@ -3,9 +3,9 @@
 #SBATCH --job-name="u3_metacardis_log_spec_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=100
+#SBATCH --cpus-per-task=200
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=4608
+#SBATCH --mem-per-cpu=2048
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
