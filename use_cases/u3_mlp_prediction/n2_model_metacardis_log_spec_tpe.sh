@@ -2,7 +2,7 @@
 
 #SBATCH --job-name="u3_metacardis_log_spec_tpe"
 #SBATCH -A es_bokulich
-#SBATCH --ntasks=300
+#SBATCH --ntasks=100
 #SBATCH --cpus-per-task=5
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=1024
