@@ -1,0 +1,39 @@
+{
+  "experiment_tag": "u2_spec2_tpe",
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "ls_model_types": [
+    "xgb"
+  ],
+  "max_cuncurrent_trials": 100,
+  "model_hyperparameters": {
+    "data_aggregation_options": [
+      "tax_genus",
+      "tax_class"
+    ],
+    "data_enrich_options": [
+      "shannon",
+      "metadata_only"
+    ],
+    "data_enrich_with": [
+      "sampling_depth_m",
+      "env_feature",
+      "latitude",
+      "longitude"
+    ],
+    "data_selection_options": [
+      "abundance_threshold",
+      "abundance_topi"
+    ],
+    "data_transform_options": [
+      "ilr",
+      null
+    ]
+  },
+  "num_trials": 20000,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "temperature_mean_degc",
+  "tracking_uri": "mlruns"
+}
