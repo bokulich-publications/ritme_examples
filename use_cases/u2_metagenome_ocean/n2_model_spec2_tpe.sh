@@ -2,7 +2,7 @@
 
 #SBATCH --job-name="u2_spec2_tpe"
 #SBATCH -A es_bokulich
-#SBATCH --tasks=100
+#SBATCH --ntasks=100
 #SBATCH --cpus-per-task=2
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=2560
