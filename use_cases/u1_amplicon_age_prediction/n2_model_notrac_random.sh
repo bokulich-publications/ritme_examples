@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_spec2_tpe"
+#SBATCH --job-name="u1_notrac_random"
 #SBATCH -A es_bokulich
-#SBATCH --ntasks=100
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=50
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=2560
+#SBATCH --mem-per-cpu=3072
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_spec2_tpe.json"
+CONFIG="config/u1_notrac_random.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file

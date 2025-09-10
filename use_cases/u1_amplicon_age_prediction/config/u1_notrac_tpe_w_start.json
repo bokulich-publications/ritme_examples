@@ -1,0 +1,32 @@
+{
+  "experiment_tag": "u1_notrac_tpe_w_start",
+  "fully_reproducible": false,
+  "group_by_column": "host_id",
+  "ls_model_types": [
+    "linreg",
+    "xgb",
+    "nn_reg",
+    "nn_class",
+    "nn_corn",
+    "rf"
+  ],
+  "max_cuncurrent_trials": 35,
+  "num_trials": 400,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "age_months",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": null,
+    "start_points_to_evaluate": [
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.001,
+        "data_transform": "ilr",
+        "data_enrich": null
+      }
+    ]
+  }
+}

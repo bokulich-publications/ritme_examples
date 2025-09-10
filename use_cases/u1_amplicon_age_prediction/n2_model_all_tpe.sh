@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_all_qmc"
+#SBATCH --job-name="u1_all_tpe"
 #SBATCH -A es_bokulich
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=60
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=50
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=14848
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_all_qmc.json"
+CONFIG="config/u1_all_tpe.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
