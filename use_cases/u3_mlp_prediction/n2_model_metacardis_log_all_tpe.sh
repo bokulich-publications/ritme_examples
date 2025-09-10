@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name="u3_metacardis_log_config_qmc"
+#SBATCH --job-name="u3_metacardis_log_all_tpe"
 #SBATCH -A es_bokulich
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=90
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=65
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=4096
+#SBATCH --mem-per-cpu=7168
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u3_metacardis_log_config_qmc.json"
+CONFIG="config/u3_metacardis_log_all_tpe.json"
 # -> path to the metadata file
 PATH_MD="../../data/u3_mlp_nishijima24/md_metacardis.tsv"
 # -> path to the feature table file
