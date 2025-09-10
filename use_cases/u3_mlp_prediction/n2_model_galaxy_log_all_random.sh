@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name="u3_galaxy_log_spec_tpe"
+#SBATCH --job-name="u3_galaxy_log_all_random"
 #SBATCH -A es_bokulich
-#SBATCH --ntasks=100
-#SBATCH --cpus-per-task=5
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=60
+#SBATCH --mem-per-cpu=7168
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=1024
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u3_galaxy_log_spec_tpe.json"
+CONFIG="config/u3_galaxy_log_all_random.json"
 # -> path to the metadata file
 PATH_MD="../../data/u3_mlp_nishijima24/md_galaxy.tsv"
 # -> path to the feature table file
