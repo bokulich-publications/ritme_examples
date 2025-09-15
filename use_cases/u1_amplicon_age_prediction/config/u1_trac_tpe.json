@@ -5,7 +5,7 @@
   "ls_model_types": [
     "trac"
   ],
-  "max_cuncurrent_trials": 24,
+  "max_cuncurrent_trials": 50,
   "num_trials": 2000,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
