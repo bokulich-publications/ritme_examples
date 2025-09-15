@@ -1,17 +1,11 @@
 {
-  "experiment_tag": "u2_all_tpe",
+  "experiment_tag": "u2_rf_tpe",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
-    "linreg",
-    "xgb",
-    "nn_reg",
-    "nn_class",
-    "nn_corn",
-    "rf",
-    "trac"
+    "rf"
   ],
-  "max_cuncurrent_trials": 30,
+  "max_cuncurrent_trials": 50,
   "num_trials": 2000,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,

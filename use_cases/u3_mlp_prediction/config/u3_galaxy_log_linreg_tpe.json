@@ -1,14 +1,11 @@
 {
-  "experiment_tag": "u3_galaxy_log_all_tpe",
+  "experiment_tag": "u3_galaxy_log_linreg_tpe",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
-    "linreg",
-    "xgb",
-    "nn_reg",
-    "rf"
+    "linreg"
   ],
-  "max_cuncurrent_trials": 30,
+  "max_cuncurrent_trials": 50,
   "model_hyperparameters": {
     "data_enrich_with": [
       "cohort"

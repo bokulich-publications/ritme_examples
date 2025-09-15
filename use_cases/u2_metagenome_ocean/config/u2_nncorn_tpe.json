@@ -1,19 +1,13 @@
 {
-  "experiment_tag": "u2_all_random",
+  "experiment_tag": "u2_nncorn_tpe",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
-    "linreg",
-    "xgb",
-    "nn_reg",
-    "nn_class",
-    "nn_corn",
-    "rf",
-    "trac"
+    "nn_corn"
   ],
-  "max_cuncurrent_trials": 30,
-  "num_trials": 1000,
-  "optuna_searchspace_sampler": "RandomSampler",
+  "max_cuncurrent_trials": 50,
+  "num_trials": 2000,
+  "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
   "target": "temperature_mean_degc",

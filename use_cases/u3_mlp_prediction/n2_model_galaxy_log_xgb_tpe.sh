@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name="u3_metacardis_log_xgb_tpe_w_start"
+#SBATCH --job-name="u3_galaxy_log_xgb_tpe"
 #SBATCH -A es_bokulich
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=65
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=50
+#SBATCH --mem-per-cpu=8704
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=7168
 #SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -18,11 +18,11 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u3_metacardis_log_xgb_tpe_w_start.json"
+CONFIG="config/u3_galaxy_log_xgb_tpe.json"
 # -> path to the metadata file
-PATH_MD="../../data/u3_mlp_nishijima24/md_metacardis.tsv"
+PATH_MD="../../data/u3_mlp_nishijima24/md_galaxy.tsv"
 # -> path to the feature table file
-PATH_FT="../../data/u3_mlp_nishijima24/metacardis_otu_table.tsv"
+PATH_FT="../../data/u3_mlp_nishijima24/galaxy_otu_table.tsv"
 # -> path to taxonomy file
 PATH_TAX="../../data/u3_mlp_nishijima24/u3_taxonomy.qza"
 # -> path to the .env file
@@ -30,7 +30,7 @@ ENV_PATH="../../.env"
 # -> path to store model logs
 LOGS_DIR="/cluster/project/bokulich/adamova/ritme_usecase_runs"
 # -> path to data splits
-PATH_DATA_SPLITS="data_splits_u3_metacardis_log"
+PATH_DATA_SPLITS="data_splits_u3_galaxy_log"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
