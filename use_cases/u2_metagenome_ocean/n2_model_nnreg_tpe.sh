@@ -48,7 +48,7 @@ if [[ -f "${PATH_DATA_SPLITS}/train_val.pkl" && -f "${PATH_DATA_SPLITS}/test.pkl
 else
     echo "Running split-train-test"
     mkdir -p "$PATH_DATA_SPLITS"
-    ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" --group-by-column "$GROUP_BY_COLUMN" --train-size 0.8 --seed 12
+    ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" --train-size 0.8 --seed 12
 fi
 
 echo "Running find-best-model-config"
