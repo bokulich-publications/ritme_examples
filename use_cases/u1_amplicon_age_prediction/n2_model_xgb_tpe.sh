@@ -6,6 +6,7 @@
 #SBATCH --cpus-per-task=50
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=8192
+#SBATCH --tmp=300000
 #SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
