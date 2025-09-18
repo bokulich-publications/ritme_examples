@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=20
 #SBATCH --time=23:59:59
 #SBATCH --mem-per-cpu=4096
-#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
+#SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy

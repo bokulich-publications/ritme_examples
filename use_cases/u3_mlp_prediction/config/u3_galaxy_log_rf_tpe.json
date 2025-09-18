@@ -11,7 +11,7 @@
       "cohort"
     ]
   },
-  "num_trials": 2000,
+  "num_trials": 8000,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
