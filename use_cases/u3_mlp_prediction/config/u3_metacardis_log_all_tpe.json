@@ -9,7 +9,7 @@
     "rf"
   ],
   "max_cuncurrent_trials": 40,
-  "num_trials": 8000,
+  "num_trials": 2500,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,

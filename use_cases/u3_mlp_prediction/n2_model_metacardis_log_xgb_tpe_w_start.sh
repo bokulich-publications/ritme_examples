@@ -28,7 +28,7 @@ PATH_TAX="../../data/u3_mlp_nishijima24/u3_taxonomy.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs_final"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u3_metacardis_log"
 

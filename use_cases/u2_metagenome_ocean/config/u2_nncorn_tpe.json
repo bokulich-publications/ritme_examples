@@ -5,8 +5,8 @@
   "ls_model_types": [
     "nn_corn"
   ],
-  "max_cuncurrent_trials": 50,
-  "num_trials": 8000,
+  "max_cuncurrent_trials": 80,
+  "num_trials": 2500,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,

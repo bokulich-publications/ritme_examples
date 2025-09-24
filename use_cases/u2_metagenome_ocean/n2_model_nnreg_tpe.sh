@@ -3,9 +3,9 @@
 #SBATCH --job-name="u2_nnreg_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=80
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=9216
+#SBATCH --mem-per-cpu=5120
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs_final"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u2"
 

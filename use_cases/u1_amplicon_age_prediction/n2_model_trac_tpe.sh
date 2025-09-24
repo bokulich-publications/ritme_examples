@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs"
+LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs_final"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u1"
 # -> group columns for train-test split
