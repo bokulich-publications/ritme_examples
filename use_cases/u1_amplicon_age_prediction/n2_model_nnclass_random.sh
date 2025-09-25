@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_nnreg_tpe"
+#SBATCH --job-name="u1_nnclass_random"
 #SBATCH -A es_bokulich
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=100
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_nnreg_tpe.json"
+CONFIG="config/u1_nnclass_random.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
