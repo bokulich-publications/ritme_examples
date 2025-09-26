@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=20
 #SBATCH --time=03:59:59
-#SBATCH --mem-per-cpu=2000
+#SBATCH --mem-per-cpu=4096
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs_final/logs_automl/%x_out.txt"
 #SBATCH --open-mode=append
 
@@ -14,7 +14,7 @@
 set -x
 # TODO: set total-time-s
 python ../src/generic_automl.py \
-    --total-time-s 60 \
+    --total-time-s 3600 \
     --usecase u1 \
     --data-splits-folder u1_amplicon_age_prediction/data_splits_u1 \
     --path-to-features ../data/u1_subramanian14/otu_table_subr14_wq.tsv \

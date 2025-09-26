@@ -42,6 +42,8 @@ def main():  # noqa: D401
     # load data
     otu_df = pd.read_csv(args.path_to_features, sep="\t", index_col=0)
     md_df = pd.read_csv(args.path_to_md, sep="\t", index_col=0)
+    # Convert absolute abundances to relative abundances
+    otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
 
     # subset
     X_train = otu_df.loc[train_idx]
