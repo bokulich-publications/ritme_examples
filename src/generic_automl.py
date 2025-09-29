@@ -6,7 +6,7 @@ import os
 
 import autosklearn.regression
 import pandas as pd
-from autosklearn.ensemble import SingleBest
+from autosklearn.ensembles import SingleBest
 from autosklearn.metrics import root_mean_squared_error
 
 from src.eval_automl import get_metrics_n_scatterplot
