@@ -6,6 +6,7 @@ import os
 
 import autosklearn.regression
 import pandas as pd
+from autosklearn.ensemble import SingleBest
 from autosklearn.metrics import root_mean_squared_error
 
 from src.eval_automl import get_metrics_n_scatterplot
@@ -51,18 +52,19 @@ def main():  # noqa: D401
     X_test = otu_df.loc[test_idx]
     y_test = md_df.loc[test_idx, args.target]
 
-    # fit model (SingleBest to mirror notebook intent)
+    common_kwargs = dict(
+        time_left_for_this_task=args.total_time_s,
+        n_jobs=-1,
+        metric=root_mean_squared_error,
+        ensemble_class=SingleBest,
+    )
+
     if args.restricted_model:
         print(
             "Using only restricted models: ard_regression, random_forest, "
-            "gradient_boosting, mlp"
+            "gradient_boosting, mlp (single-model mode)"
         )
         automl = autosklearn.regression.AutoSklearnRegressor(
-            time_left_for_this_task=args.total_time_s,
-            n_jobs=-1,
-            ensemble_class="SingleBest",
-            ensemble_kwargs={"ensemble_size": 0},
-            metric=root_mean_squared_error,
             include={
                 "regressor": [
                     "ard_regression",
@@ -71,15 +73,11 @@ def main():  # noqa: D401
                     "mlp",
                 ]
             },
+            **common_kwargs,
         )
     else:
-        automl = autosklearn.regression.AutoSklearnRegressor(
-            time_left_for_this_task=args.total_time_s,
-            n_jobs=-1,
-            ensemble_class="SingleBest",
-            ensemble_kwargs={"ensemble_size": 0},
-            metric=root_mean_squared_error,
-        )
+        automl = autosklearn.regression.AutoSklearnRegressor(**common_kwargs)
+
     automl.fit(X_train, y_train)
 
     metrics, fig = get_metrics_n_scatterplot(automl, X_train, y_train, X_test, y_test)
