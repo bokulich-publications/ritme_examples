@@ -1,8 +1,8 @@
-"""automl implementation for usecase regression tasks
-"""
+"""automl implementation for usecase regression tasks"""
 
 import argparse
 import os
+from pprint import pprint
 
 import autosklearn.regression
 import pandas as pd
@@ -28,6 +28,11 @@ def parse_args():
             "(ard_regression, random_forest, gradient_boosting, mlp)."
         ),
     )
+    p.add_argument(
+        "--single-best",
+        action="store_true",
+        help=("If set, restrict Auto-Sklearn to single best model - no ensembles."),
+    )
     return p.parse_args()
 
 
@@ -52,17 +57,25 @@ def main():  # noqa: D401
     X_test = otu_df.loc[test_idx]
     y_test = md_df.loc[test_idx, args.target]
 
-    common_kwargs = dict(
-        time_left_for_this_task=args.total_time_s,
-        n_jobs=-1,
-        metric=root_mean_squared_error,
-        ensemble_class=SingleBest,
-    )
+    if args.single_best:
+        print("No ensembles - only single best model.")
+        common_kwargs = dict(
+            time_left_for_this_task=args.total_time_s,
+            n_jobs=-1,
+            metric=root_mean_squared_error,
+            ensemble_class=SingleBest,
+        )
+    else:
+        common_kwargs = dict(
+            time_left_for_this_task=args.total_time_s,
+            n_jobs=-1,
+            metric=root_mean_squared_error,
+        )
 
     if args.restricted_model:
         print(
             "Using only restricted models: ard_regression, random_forest, "
-            "gradient_boosting, mlp (single-model mode)"
+            "gradient_boosting, mlp"
         )
         automl = autosklearn.regression.AutoSklearnRegressor(
             include={
@@ -79,7 +92,13 @@ def main():  # noqa: D401
         automl = autosklearn.regression.AutoSklearnRegressor(**common_kwargs)
 
     automl.fit(X_train, y_train)
+    print("Print model leaderboard:")
+    print(automl.leaderboard())
 
+    print("Final ensemble:")
+    pprint(automl.show_models(), indent=4)
+
+    # evaluate
     metrics, fig = get_metrics_n_scatterplot(automl, X_train, y_train, X_test, y_test)
 
     out_dir = "automl"

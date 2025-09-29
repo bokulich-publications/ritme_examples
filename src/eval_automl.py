@@ -96,7 +96,7 @@ def _calculate_metrics(all_preds: pd.DataFrame, model_type: str) -> pd.DataFrame
 
 
 def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
-    model_type = "original"
+    model_type = "automl"
     dic_data = {"train": [X_train, y_train], "test": [X_test, y_test]}
 
     # get predictions

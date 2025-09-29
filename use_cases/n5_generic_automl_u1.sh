@@ -15,11 +15,12 @@ set -x
 # TODO: set total-time-s
 python ../src/generic_automl.py \
     --total-time-s 3600 \
-    --usecase u1 \
+    --usecase u1_single_all_test \
     --data-splits-folder u1_amplicon_age_prediction/data_splits_u1 \
     --path-to-features ../data/u1_subramanian14/otu_table_subr14_wq.tsv \
     --path-to-md ../data/u1_subramanian14/md_subr14.tsv \
-    --target age_months
+    --target age_months \
+    --single-best
 
 # get elapsed time of job
 sstat -j $SLURM_JOB_ID

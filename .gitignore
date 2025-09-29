@@ -184,6 +184,7 @@ use_cases/euler_logs/*
 use_cases/all_experiments_*
 use_cases/launched_experiments_*
 use_cases/all_qmc_experiments*
+use_cases/automl/*
 
 # any personal scratch files or folders
 x_*
