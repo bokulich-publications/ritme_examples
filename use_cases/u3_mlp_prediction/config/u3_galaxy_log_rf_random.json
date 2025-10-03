@@ -5,7 +5,7 @@
   "ls_model_types": [
     "rf"
   ],
-  "max_cuncurrent_trials": 30,
+  "max_cuncurrent_trials": 80,
   "model_hyperparameters": {
     "data_enrich_with": [
       "cohort"

@@ -1,9 +1,9 @@
 {
-  "experiment_tag": "u3_galaxy_log_rf_tpe",
+  "experiment_tag": "u3_metacardis_log_nnreg_tpe",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
-    "rf"
+    "nn_reg"
   ],
   "max_cuncurrent_trials": 80,
   "model_hyperparameters": {
