@@ -22,12 +22,16 @@ def parse_args():
     p.add_argument("--target", required=True, help="Target column in metadata")
     p.add_argument(
         "--restricted-model",
-        type=list,
+        dest="restricted_models",
+        nargs="+",
         default=[],
-        help=(
-            "If defined, restrict Auto-Sklearn to a small subset of regressors "
-            "[ard_regression, random_forest, gradient_boosting, mlp]."
-        ),
+        choices=[
+            "ard_regression",
+            "gradient_boosting",
+            "mlp",
+            "random_forest",
+        ],
+        help="Space separated list of regressors to include.",
     )
     p.add_argument(
         "--single-best",
@@ -81,10 +85,10 @@ def main():
             memory_limit=24000,
         )
 
-    if len(args.restricted_model) > 0:
-        print(f"Using only restricted models: {args.restricted_model}")
+    if len(args.restricted_models) > 0:
+        print(f"Using only restricted models: {args.restricted_models}")
         automl = autosklearn.regression.AutoSklearnRegressor(
-            include={"regressor": args.restricted_model},
+            include={"regressor": args.restricted_models},
             **common_kwargs,
         )
     else:

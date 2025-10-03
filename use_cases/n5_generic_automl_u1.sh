@@ -21,7 +21,7 @@ python ../src/generic_automl.py \
     --path-to-md ../data/u1_subramanian14/md_subr14.tsv \
     --target age_months \
     --single-best \
-    --restricted-model ["gradient_boosting"]
+    --restricted-model gradient_boosting
 
 # "ard_regression", "random_forest", "gradient_boosting", "mlp",
 
