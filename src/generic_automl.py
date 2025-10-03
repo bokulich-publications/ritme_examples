@@ -22,10 +22,11 @@ def parse_args():
     p.add_argument("--target", required=True, help="Target column in metadata")
     p.add_argument(
         "--restricted-model",
-        action="store_true",
+        type=list,
+        default=[],
         help=(
-            "If set, restrict Auto-Sklearn to a small subset of regressors "
-            "(ard_regression, random_forest, gradient_boosting, mlp)."
+            "If defined, restrict Auto-Sklearn to a small subset of regressors "
+            "[ard_regression, random_forest, gradient_boosting, mlp]."
         ),
     )
     p.add_argument(
@@ -36,7 +37,7 @@ def parse_args():
     return p.parse_args()
 
 
-def main():  # noqa: D401
+def main():
     args = parse_args()
 
     # load indices
@@ -50,6 +51,8 @@ def main():  # noqa: D401
     md_df = pd.read_csv(args.path_to_md, sep="\t", index_col=0)
     # Convert absolute abundances to relative abundances
     otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
+    print("md_df.shape", md_df.shape)
+    print("otu_df.shape", otu_df.shape)
 
     # subset
     X_train = otu_df.loc[train_idx]
@@ -57,6 +60,10 @@ def main():  # noqa: D401
     X_test = otu_df.loc[test_idx]
     y_test = md_df.loc[test_idx, args.target]
 
+    # X, y = sklearn.datasets.load_diabetes(return_X_y=True)
+    # X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+    #     X, y, random_state=1
+    # )
     if args.single_best:
         print("No ensembles - only single best model.")
         common_kwargs = dict(
@@ -64,28 +71,20 @@ def main():  # noqa: D401
             n_jobs=-1,
             metric=root_mean_squared_error,
             ensemble_class=SingleBest,
+            memory_limit=24000,
         )
     else:
         common_kwargs = dict(
             time_left_for_this_task=args.total_time_s,
             n_jobs=-1,
             metric=root_mean_squared_error,
+            memory_limit=24000,
         )
 
-    if args.restricted_model:
-        print(
-            "Using only restricted models: ard_regression, random_forest, "
-            "gradient_boosting, mlp"
-        )
+    if len(args.restricted_model) > 0:
+        print(f"Using only restricted models: {args.restricted_model}")
         automl = autosklearn.regression.AutoSklearnRegressor(
-            include={
-                "regressor": [
-                    "ard_regression",
-                    "random_forest",
-                    "gradient_boosting",
-                    "mlp",
-                ]
-            },
+            include={"regressor": args.restricted_model},
             **common_kwargs,
         )
     else:
