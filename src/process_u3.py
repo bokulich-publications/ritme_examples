@@ -7,8 +7,8 @@ def process_feature_table(path_to_data, filename):
     """Read feature table and process it."""
     df = pd.read_csv(f"{path_to_data}/{filename}.tsv", sep="\t", index_col=0)
     print(f"Original shape {df.shape}")
-    # extract only name of feature within "[]" and remove rest
-    df.columns = df.columns.str.extract(r"\[([^]]+)\]", expand=False)
+    # extract only name of feature within last "[]" and remove rest
+    df.columns = df.columns.str.findall(r"\[([^]]+)\]").str[-1]
     # assuming "-1" is "unclassified"
     df.columns = df.columns.fillna("unclassified")
     return df
