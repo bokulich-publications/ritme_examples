@@ -1,23 +1,23 @@
 #!/bin/bash
 
-#SBATCH --job-name="n5_automl_u1"
+#SBATCH --job-name="n5_automl_u3"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=50
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=5120
+#SBATCH --mem-per-cpu=4096
 #SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs_final/logs_automl/%x_out.txt"
 #SBATCH --open-mode=append
 
 set -x
 
 python ../src/generic_automl.py \
-    --total-time-s 203400 \
-    --usecase u1 \
-    --data-splits-folder u1_amplicon_age_prediction/data_splits_u1 \
-    --path-to-features ../data/u1_subramanian14/otu_table_subr14_wq.tsv \
-    --path-to-md ../data/u1_subramanian14/md_subr14.tsv \
-    --target age_months \
+    --total-time-s 258850 \
+    --usecase u3 \
+    --data-splits-folder u3_mlp_prediction/data_splits_u3_galaxy_log \
+    --path-to-features ../data/u3_mlp_nishijima24/galaxy_otu_table.tsv \
+    --path-to-md ../data/u3_mlp_nishijima24/md_galaxy.tsv \
+    --target count_log10 \
     --single-best \
     --restricted-model gradient_boosting
 
