@@ -14,10 +14,8 @@ set -x
 python ../src/extract_mlflow_logs.py --dirs \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_linreg_random \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_linreg_tpe \
-/cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_nnclass_random \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_nnclass_tpe \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_nncorn_tpe3 \
-/cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_nnreg_random \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_nnreg_tpe \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_rf_random \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u1_rf_tpe \
