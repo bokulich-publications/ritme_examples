@@ -1,4 +1,5 @@
 import argparse
+import ast
 import os
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -9,7 +10,50 @@ import mlflow
 import pandas as pd
 from tqdm import tqdm
 
-from ritme.evaluate_mlflow import post_process_data_transform
+
+def post_process_data_transform(all_trials):
+    """
+    function copied from newest ritme version - ritme v1.2.4 used for these
+    experiments did not have this fixed yet
+    """
+    proc_trials = all_trials.copy()
+    # none, shannon, metadata_only shannon_and_metadata
+
+    #  get number of metadata fields
+    proc_trials.loc[proc_trials["params.data_enrich"] == "None", "nb_md_fts"] = 0
+    proc_trials.loc[proc_trials["params.data_enrich"] == "shannon", "nb_md_fts"] = 1
+
+    if "params.data_enrich_with" in proc_trials.columns:
+        nb_enrich_fts = (
+            proc_trials["params.data_enrich_with"]
+            .where(
+                proc_trials["params.data_enrich_with"].notna()
+                & (proc_trials["params.data_enrich_with"] != "None"),
+                "[]",
+            )
+            .map(ast.literal_eval)
+            .str.len()
+        )
+        proc_trials.loc[
+            proc_trials["params.data_enrich"] == "metadata_only", "nb_md_fts"
+        ] = nb_enrich_fts
+        proc_trials.loc[
+            proc_trials["params.data_enrich"] == "shannon_and_metadata", "nb_md_fts"
+        ] = nb_enrich_fts + 1
+
+    # from this retrieve # microbiome features
+    proc_trials["nb_microbiome_fts"] = (
+        proc_trials["metrics.nb_features"] - proc_trials["nb_md_fts"]
+    )
+
+    # wherever nb_microbiome_fts is 1, set data_transform to None
+    # this was performed in ritme - but MLflow UI did not update this automatically
+    proc_trials.loc[proc_trials["nb_microbiome_fts"] == 1, "params.data_transform"] = (
+        "None"
+    )
+    # drop helper columns
+    proc_trials = proc_trials.drop(columns=["nb_md_fts", "nb_microbiome_fts"])
+    return proc_trials
 
 
 def _fetch_runs_for_directory(log_folder_location: str) -> pd.DataFrame:
@@ -26,6 +70,7 @@ def _fetch_runs_for_directory(log_folder_location: str) -> pd.DataFrame:
     pd.DataFrame
         Post-processed runs DataFrame.
     """
+    print(f"post-processing {log_folder_location}")
     mlflow_folder_location = os.path.join(log_folder_location, "mlruns")
     # Allow user to pass either the parent or the mlruns folder itself.
     if os.path.isdir(mlflow_folder_location):
