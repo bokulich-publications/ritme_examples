@@ -1,0 +1,23 @@
+{
+  "experiment_tag": "u1_nncorn_tpe3",
+  "fully_reproducible": false,
+  "group_by_column": "host_id",
+  "ls_model_types": [
+    "nn_corn"
+  ],
+  "max_cuncurrent_trials": 70,
+  "num_trials": 2500,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "age_months",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "health_status_at_sampling",
+      "diet_milk",
+      "diet_weaning",
+      "abx_7d_prior"
+    ]
+  }
+}

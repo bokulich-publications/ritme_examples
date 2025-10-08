@@ -1,0 +1,147 @@
+{
+  "experiment_tag": "u3_metacardis_log_xgb_tpe_w_start",
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "ls_model_types": [
+    "xgb"
+  ],
+  "max_cuncurrent_trials": 80,
+  "num_trials": 2500,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "count_log10",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "xgb": {
+    "start_points_to_evaluate": [
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": "alr",
+        "data_enrich": "shannon",
+        "n_estimators": 100,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+            {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": "clr",
+        "data_enrich": "shannon",
+        "n_estimators": 100,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+            {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": "ilr",
+        "data_enrich": "shannon",
+        "n_estimators": 100,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 100,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 500,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 1000,
+        "max_depth": 3,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 500,
+        "max_depth": 5,
+        "learning_rate": 0.01,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 500,
+        "max_depth": 4,
+        "learning_rate": 0.1,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      },
+      {
+        "data_aggregation": null,
+        "data_selection": "abundance_threshold",
+        "data_selection_t": 0.0001,
+        "data_transform": null,
+        "data_enrich": "shannon",
+        "n_estimators": 500,
+        "max_depth": 4,
+        "learning_rate": 0.1,
+        "gamma": 0.01,
+        "colsample_bytree": 0.75,
+        "subsample": 1,
+        "min_child_weight": 1
+      }
+    ]
+  }
+  }
+}

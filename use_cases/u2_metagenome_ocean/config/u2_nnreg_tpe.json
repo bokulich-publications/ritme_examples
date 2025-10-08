@@ -1,0 +1,23 @@
+{
+  "experiment_tag": "u2_nnreg_tpe",
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "ls_model_types": [
+    "nn_reg"
+  ],
+  "max_cuncurrent_trials": 80,
+  "num_trials": 2500,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "temperature_mean_degc",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "sampling_depth_m",
+      "env_feature",
+      "latitude",
+      "longitude"
+    ]
+  }
+}
