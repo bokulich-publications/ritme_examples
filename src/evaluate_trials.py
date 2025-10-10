@@ -11,9 +11,9 @@ from scipy.stats import kruskal
 ###############################
 # Single source of truth for figure size and font scaling; all plotting
 # functions will use these unless explicitly overridden via arguments.
-GLOBAL_FIGSIZE = (9, 4)  # (width, height) in inches
+GLOBAL_FIGSIZE = (7, 3)  # (width, height) in inches
 GLOBAL_DPI = 400
-GLOBAL_FONT_SCALE = 1.6
+GLOBAL_FONT_SCALE = 1.5
 
 pio.templates.default = "seaborn"
 plt.rcParams.update({"font.family": "DejaVu Sans"})
@@ -58,6 +58,7 @@ def _static_scatter(
     figsize=None,
     font_scale=None,
     dpi=None,
+    title: str = "",
 ):
     """Internal helper for static scatter plot.
 
@@ -76,20 +77,18 @@ def _static_scatter(
         data=trials,
         s=50,
         ax=ax,
-        edgecolor="black",
-        linewidth=0.05,
+        # edgecolor="black",
+        # linewidth=0.01,
     )
 
     ax.set_xlabel("Number of Features", labelpad=10)
     ax.set_ylabel(metric_name, labelpad=10)
-    ax.set_title(f"Performance vs. Model Complexity: Top {n} trials", pad=15)
+    ax.set_title(f"{title}", pad=15, fontsize=20)
     # Place legend outside the plot at the bottom-right
     ax.legend(
         title=group_name,
-        loc="lower left",
-        bbox_to_anchor=(1.02, 0),
+        loc="lower right",
         borderaxespad=0.0,
-        # frameon=False,
     )
 
     # sns.despine(ax=ax)
@@ -109,6 +108,7 @@ def plot_complexity_vs_metric(
     figsize=None,
     font_scale=None,
     dpi=None,
+    title: str = "",
 ):
     """Plot model complexity vs. a metric.
 
@@ -124,6 +124,7 @@ def plot_complexity_vs_metric(
         figsize=figsize,
         font_scale=font_scale,
         dpi=dpi,
+        title=title,
     )
     return fig, ax
 
