@@ -1,7 +1,10 @@
+import math
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.io as pio
 import seaborn as sns
+from scipy.stats import kruskal
 
 ###############################
 # Global plotting parameters  #
@@ -229,6 +232,7 @@ def multi_boxplot_metric(
     sep_lw: float = 0.8,
     sep_alpha: float = 0.85,
     title: str = "",
+    alpha: float = 0.05,
 ):
     """Create a stacked (row-wise) set of horizontal boxplots sharing the same x-axis.
 
@@ -260,6 +264,18 @@ def multi_boxplot_metric(
     showfliers : bool
         Whether to show outliers.
 
+    Notes
+    -----
+    For each group column, a global significance test is performed across its
+    categories using the Kruskal–Wallis test. After plotting, the function
+    prints the p-value per group to stdout. When a p-value underflows to 0.0,
+    it is replaced by the smallest positive representable float (math.ulp(0.0)).
+    The same formatted p-value label ("p=" or "p<") is also annotated in the
+    top-right corner of each corresponding subplot.
+
+    The parameter `test_method` is deprecated and ignored; Kruskal–Wallis is
+    always used.
+
     Returns
     -------
     fig, axes : matplotlib Figure and list of Axes
@@ -289,6 +305,7 @@ def multi_boxplot_metric(
     # Determine a consistent color map per unique category per group.
     # (Simpler: independent palette for each group column.)
     palette_cache = {}
+    p_values = []  # collect (group_label, p_value or None)
 
     for ax, (gcol, glabel) in zip(axes, group_specs):
         if gcol not in trials.columns:
@@ -330,6 +347,40 @@ def multi_boxplot_metric(
         # Remove spines for cleaner look
         sns.despine(ax=ax, left=False, bottom=True)
 
+        # Significance test across categories for this group column
+        # Kruskal–Wallis; requires at least 2 non-empty groups
+        try:
+            groups = [vals[metric_col].values for _, vals in subset.groupby(gcol)]
+            groups = [g for g in groups if len(g) > 0]
+            p_value = None
+            if len(groups) >= 2:
+                stat, p_value = kruskal(*groups)
+                if p_value == 0.0:
+                    # Replace 0.0 (underflow) with the smallest positive float
+                    p_value = math.ulp(0.0)
+            # Annotate p-value on the subplot (top-right), if available
+            if p_value is not None:
+                if p_value == math.ulp(0.0):
+                    label = f"p<{p_value:.3g}"
+                else:
+                    label = f"p={p_value:.3g}"
+                ax.text(
+                    0.98,
+                    0.98,
+                    label,
+                    transform=ax.transAxes,
+                    ha="right",
+                    va="top",
+                    # fontsize=10,
+                    # fontweight="bold",
+                    # bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
+                    # pad=2.5),
+                )
+            p_values.append((glabel, p_value))
+        except Exception:
+            # If the test fails (e.g., insufficient data), skip annotation silently
+            p_values.append((glabel, None))
+
     # Shared X label on last axis
     axes[-1].set_xlabel(metric_name, labelpad=12)
 
@@ -366,4 +417,16 @@ def multi_boxplot_metric(
                 )
             )
     plt.show()
+
+    # Print p-values per group after plotting
+    print("Group significance p-values (Kruskal–Wallis):")
+    for glabel, p in p_values:
+        if p is None:
+            print(f"  {glabel}: n/a")
+        else:
+            # 3 significant digits, scientific notation if very small
+            if p == math.ulp(0.0):
+                print(f"  {glabel}: p<{p:.3g}")
+            else:
+                print(f"  {glabel}: p={p:.3g}")
     return fig, axes
