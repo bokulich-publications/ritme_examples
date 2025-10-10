@@ -73,15 +73,25 @@ def _static_scatter(
         data=trials,
         s=50,
         ax=ax,
+        edgecolor="black",
+        linewidth=0.05,
     )
 
     ax.set_xlabel("Number of Features", labelpad=10)
     ax.set_ylabel(metric_name, labelpad=10)
-    ax.set_title(f"Performance vs. Model Complexity: top {n} trials", pad=15)
-    ax.legend(title=group_name)
+    ax.set_title(f"Performance vs. Model Complexity: Top {n} trials", pad=15)
+    # Place legend outside the plot at the bottom-right
+    ax.legend(
+        title=group_name,
+        loc="lower left",
+        bbox_to_anchor=(1.02, 0),
+        borderaxespad=0.0,
+        # frameon=False,
+    )
 
-    sns.despine(ax=ax)
-    plt.tight_layout()
+    # sns.despine(ax=ax)
+    # Reserve a margin on the right so the outside legend is not clipped
+    plt.tight_layout(rect=(0, 0, 0.85, 1))
     plt.show()
     return fig, ax
 
