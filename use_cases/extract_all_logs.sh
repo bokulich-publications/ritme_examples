@@ -33,4 +33,15 @@ python ../src/extract_mlflow_logs.py --dirs \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u2_rf_tpe \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u2_xgb_random \
 /cluster/work/bokulich/adamova/ritme_usecase_runs_final/u2_xgb_tpe \
--o merged_u1_u2_runs_work_no2trac
+/cluster/work/bokulich/adamova/ritme_usecase_runs_final/u2_trac_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_galaxy_log_linreg_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_galaxy_log_nnreg_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_galaxy_log_rf_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_galaxy_log_xgb_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_galaxy_log_xgb_tpe_w_start \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_metacardis_log_linreg_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_metacardis_log_nnreg_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_metacardis_log_rf_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_metacardis_log_xgb_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final/u3_metacardis_log_xgb_tpe_w_start \
+-o merged_all_trials
