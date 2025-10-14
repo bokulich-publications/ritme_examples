@@ -1,0 +1,29 @@
+{
+  "experiment_tag": "u1_xgb_tpe_restricted",
+  "fully_reproducible": false,
+  "group_by_column": "host_id",
+  "ls_model_types": [
+    "xgb"
+  ],
+  "max_cuncurrent_trials": 80,
+  "num_trials": 2500,
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "age_months",
+  "tracking_uri": "mlruns",
+  "model_hyperparameters": {
+      "data_aggregation_options": [
+      "tax_order"
+    ],
+    "data_enrich_options": [
+      null
+    ],
+    "data_selection_options": [
+      null
+    ],
+    "data_transform_options": [
+      null
+    ]
+  }
+}
