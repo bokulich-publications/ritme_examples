@@ -171,7 +171,7 @@ def get_consistent_color_map(
     return colors, existing
 
 
-def _static_scatter(
+def plot_complexity_vs_metric(
     trials,
     metric_col,
     metric_name,
@@ -182,11 +182,21 @@ def _static_scatter(
     font_scale=None,
     dpi=None,
     title: str = "",
+    x_log_scale: bool = False,
 ):
-    """Internal helper for static scatter plot.
+    """Plot model complexity vs. a metric.
 
-    Parameters mirror public wrapper; figsize/font_scale/dpi can override
-    global defaults when provided.
+    Parameters allow optional override of global figure settings.
+
+    Parameters
+    ----------
+    trials : pd.DataFrame
+        DataFrame containing at least "metrics.nb_features", the metric column,
+        and the grouping column.
+    x_log_scale : bool, optional (default: False)
+        If True, plot the x-axis (number of features) on a logarithmic scale.
+        Requires all x values to be strictly positive; otherwise keeps linear
+        scale and prints a short message.
     """
     _set_seaborn_context(font_scale)
     _, color_map = create_color_map(trials, "params.model")
@@ -203,8 +213,20 @@ def _static_scatter(
         # edgecolor="black",
         # linewidth=0.01,
     )
+    # Optionally apply log scale on X (requires positive values)
+    x_label = "Number of Features"
+    if x_log_scale:
+        x_vals = trials["metrics.nb_features"].dropna().values
+        if (x_vals <= 0).any():
+            print(
+                "[plot_complexity_vs_metric] x_log_scale=True requested but some x "
+                "values are <= 0; keeping linear scale."
+            )
+        else:
+            ax.set_xscale("log")
+            x_label += " (log scale)"
 
-    ax.set_xlabel("Number of Features", labelpad=10)
+    ax.set_xlabel(x_label, labelpad=10)
     ax.set_ylabel(metric_name, labelpad=10)
     ax.set_title(f"{title}", pad=15, fontsize=20)
     # Place legend inside bottom-right
@@ -217,37 +239,6 @@ def _static_scatter(
     # Reserve a margin on the right so the outside legend is not clipped
     plt.tight_layout(rect=(0, 0, 0.85, 1))
     plt.show()
-    return fig, ax
-
-
-def plot_complexity_vs_metric(
-    trials,
-    metric_col,
-    metric_name,
-    group_col,
-    group_name,
-    n,
-    figsize=None,
-    font_scale=None,
-    dpi=None,
-    title: str = "",
-):
-    """Plot model complexity vs. a metric.
-
-    Parameters allow optional override of global figure settings.
-    """
-    fig, ax = _static_scatter(
-        trials,
-        metric_col,
-        metric_name,
-        group_col,
-        group_name,
-        n,
-        figsize=figsize,
-        font_scale=font_scale,
-        dpi=dpi,
-        title=title,
-    )
     return fig, ax
 
 
@@ -327,6 +318,182 @@ def plot_trend_over_time(
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+
+def plot_trend_over_time_multi_models(
+    df: pd.DataFrame,
+    y_col: str,
+    group_col: str = "params.model",
+    time_col: str = "start_time",
+    models: list | None = None,
+    window: int = 20,
+    title_prefix: str = "Model: ",
+    figsize: tuple | None = None,
+    raw_color: str = "gray",
+    raw_alpha: float = 0.4,
+    trend_color: str = "C0",
+    font_scale: float | None = None,
+    dpi: int | None = None,
+    first_n: int | None = None,
+    y_log_scale: bool = False,
+):
+    """
+    Plot the trend over time for multiple models stacked vertically (n_models × 1)
+    using a shared x-axis.
+
+    Each row corresponds to one model from `models` (or unique values from
+    `group_col` when `models` is None). Within each subplot we render raw points
+    and a rolling-mean trend of `y_col` across trials ordered by `time_col`.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Source dataframe containing at least `group_col`, `y_col`, and `time_col`.
+    y_col : str
+        Name of the metric column (e.g. "metrics.rmse_val").
+    group_col : str, default "params.model"
+        Column containing model identifiers.
+    time_col : str, default "start_time"
+        Column used for ordering trials over time. Will be parsed via pandas
+        to_datetime.
+    models : list[str] | None, default None
+        Specific list of models to include. Defaults to all unique values in
+        `group_col`.
+    window : int, default 20
+        Rolling mean window size.
+    title_prefix : str, default "Model: "
+        Prefix for each subplot title.
+    figsize : tuple | None
+        Overall figure size. Defaults to scaling width by number of models.
+    raw_color : str, default "gray"
+        Color for raw scatter points.
+    raw_alpha : float, default 0.4
+        Alpha for raw scatter points.
+    trend_color : str, default "C0"
+        Color for rolling mean line.
+    font_scale : float | None
+        Optional override of global seaborn font scale.
+    dpi : int | None
+        DPI for the figure.
+    first_n : int | None
+        If provided, only the first N trials per model (after time sort) are plotted.
+    y_log_scale : bool, default False
+        If True, plot the y-axis on a logarithmic scale in each subplot when
+        all relevant values are strictly positive.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+    axes : list[matplotlib.axes.Axes]
+    """
+    required_cols = {group_col, y_col, time_col}
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"Missing required columns for plot_trend_over_time_multi_models: {missing}"
+        )
+
+    _set_seaborn_context(font_scale)
+
+    # Determine models to plot
+    if models is None:
+        models = list(pd.unique(df[group_col]))
+    models = sorted([m for m in models if pd.notna(m)])
+    # Prepare per-model series and track max length for shared x-axis
+    series = []
+    max_len = 0
+    for model in models:
+        d = df[df[group_col] == model].copy()
+        d[time_col] = pd.to_datetime(d[time_col], format="ISO8601")
+        d = d.sort_values(time_col)
+        if first_n is not None and first_n > 0:
+            d = d.head(first_n)
+        d = d[[y_col]].copy()
+
+        d["trial_index"] = range(1, len(d) + 1)
+        d["smoothed"] = (
+            d[y_col].rolling(window=window, center=True, min_periods=1).mean()
+        )
+        max_len = max(max_len, len(d))
+        series.append((model, d))
+
+    # Figure size defaults: scale height by number of models (ensure a minimum
+    # per-row height of ~4 inches)
+    if figsize is None:
+        figsize = (GLOBAL_FIGSIZE[0], GLOBAL_FIGSIZE[1] * len(models))
+
+    fig, axes = plt.subplots(
+        nrows=len(models),
+        ncols=1,
+        sharex=True,
+        figsize=figsize,
+        dpi=dpi or GLOBAL_DPI,
+    )
+    if len(models) == 1:
+        axes = [axes]
+
+    # Human-friendly y-label mapping like plot_trend_over_time
+    if y_col == "metrics.rmse_val":
+        y_label = "RMSE Validation"
+    else:
+        y_label = y_col
+
+    for ax, (model, d) in zip(axes, series):
+        ax.scatter(
+            d["trial_index"],
+            d[y_col],
+            color=raw_color,
+            alpha=raw_alpha,
+            s=12,
+            label="Raw",
+        )
+        ax.plot(
+            d["trial_index"],
+            d["smoothed"],
+            color=trend_color,
+            linewidth=2,
+            label=f"Rolling mean (w={window})",
+        )
+        ax.set_title(f"{title_prefix}{model}")
+        ax.grid(True)
+        # Y label on the third subplot only to reduce clutter
+        if ax is axes[2]:
+            y_label_printed = y_label
+        else:
+            y_label_printed = ""
+        ax.set_ylabel(y_label_printed)
+        # Optional log scale per subplot if values are positive
+        if y_log_scale:
+            if (d[y_col] <= 0).any() or (d["smoothed"] <= 0).any():
+                # keep linear for this subplot
+                pass
+            else:
+                ax.set_yscale("log")
+                if y_label_printed != "":
+                    ax.set_ylabel(y_label_printed + " (log scale)")
+
+    # Shared x-label and limits
+    for ax in axes:
+        if max_len > 0:
+            ax.set_xlim(1, max_len)
+        # X label on last subplot only to reduce clutter
+        if ax is axes[-1]:
+            ax.set_xlabel("Trial number")
+        else:
+            ax.set_xlabel("")
+    # Common legend: use the last axis to collect handles
+    handles, labels = axes[-1].get_legend_handles_labels()
+    if handles:
+        fig.legend(
+            handles,
+            labels,
+            loc="lower center",
+            ncol=2,
+            bbox_to_anchor=(0.5, -0.02),
+        )
+    fig.tight_layout()
+    plt.show()
+    return fig, axes
 
 
 def boxplot_metric(
