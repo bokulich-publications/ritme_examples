@@ -1,3 +1,4 @@
+import hashlib
 import math
 
 import matplotlib.pyplot as plt
@@ -13,7 +14,7 @@ from scipy.stats import kruskal
 # functions will use these unless explicitly overridden via arguments.
 GLOBAL_FIGSIZE = (7, 3)  # (width, height) in inches
 GLOBAL_DPI = 400
-GLOBAL_FONT_SCALE = 1.5
+GLOBAL_FONT_SCALE = 1.7
 
 pio.templates.default = "seaborn"
 plt.rcParams.update({"font.family": "DejaVu Sans"})
@@ -46,6 +47,128 @@ def create_color_map(df, column, cmap_name="Set3"):
     color_map = {val: cmap(i) for i, val in enumerate(unique_vals)}
     colors = df[column].map(color_map).tolist()
     return colors, color_map
+
+
+# Global registry to ensure consistent colors across figures per group column
+GLOBAL_COLOR_REGISTRY: dict[str, dict] = {}
+
+# Preset, hard-coded category orders per column to ensure identical colors
+# across independent runs. Colors are assigned from the Set3 palette in the
+# given order (index 0,1,2,...). NaN entries from the user's lists are
+# intentionally omitted because rows with NaN group values are dropped before
+# plotting.
+PRESET_COLOR_ORDERS: dict[str, list[str]] = {
+    "params.data_aggregation": [
+        "tax_order",
+        "tax_genus",
+        "tax_class",
+        "tax_family",
+    ],
+    "params.data_selection": [
+        "abundance_topi",
+        "variance_quantile",
+        "abundance_quantile",
+        "abundance_threshold",
+        "variance_topi",
+        "variance_ith",
+        "abundance_ith",
+        "variance_threshold",
+    ],
+    "params.data_transform": [
+        "ilr",
+        "alr",
+        "rank",
+        "clr",
+        "pa",
+    ],
+    "params.data_enrich": [
+        "shannon_and_metadata",
+        "metadata_only",
+        "shannon",
+    ],
+    "params.model": [
+        "xgb",
+        "rf",
+        "nn_class",
+        "nn_corn",
+        "nn_reg",
+        "linreg",
+        "trac",
+    ],
+}
+
+
+def get_consistent_color_map(
+    df: pd.DataFrame,
+    column: str,
+    palette_name: str = "Set3",
+    n_colors: int = 12,
+):
+    """
+    Return a stable mapping from category -> color for the given column that
+    persists across calls, ensuring the same category always gets the same
+    color even in different figures.
+
+    Strategy:
+    - Use a fixed-size palette (e.g., tab20).
+    - Assign each category an initial index from a stable hash of the category.
+    - Resolve collisions by linear probing within the palette size.
+    - Store/extend mapping in a module-level registry keyed by column.
+    """
+    palette = sns.color_palette(palette_name, n_colors)
+
+    # Categories present in this dataframe (ignore NaN)
+    uniques = [u for u in pd.unique(df[column]) if pd.notna(u)]
+
+    # Start from preset mapping if defined for this column; this guarantees the
+    # same category->color assignment across independent runs.
+    if column in PRESET_COLOR_ORDERS:
+        preset_order = PRESET_COLOR_ORDERS[column]
+        existing: dict = {
+            cat: palette[i % n_colors] for i, cat in enumerate(preset_order)
+        }
+    else:
+        existing = GLOBAL_COLOR_REGISTRY.get(column, {}).copy()
+
+    # Track used palette indices from existing mapping (if any)
+    used_indices = set()
+    if any(color not in palette for color in existing.values()):
+        # Enforce requested palette strictly if previous colors came from a
+        # different palette
+        existing = {k: v for k, v in existing.items() if v in palette}
+    for cat, color in existing.items():
+        try:
+            idx = palette.index(color)
+        except ValueError:
+            idx = None
+        if idx is not None:
+            used_indices.add(idx)
+
+    # Fallback assignment for any unseen categories in the dataframe.
+    # Use a stable hash to pick an initial index, then linear probe to avoid collisions.
+    def stable_idx(val) -> int:
+        h = hashlib.md5(str(val).encode("utf-8")).hexdigest()
+        return int(h, 16) % n_colors
+
+    for cat in uniques:
+        if cat in existing:
+            continue
+        base = stable_idx(cat)
+        idx = base
+        assigned = False
+        for _ in range(n_colors):
+            if idx not in used_indices:
+                existing[cat] = palette[idx]
+                used_indices.add(idx)
+                assigned = True
+                break
+            idx = (idx + 1) % n_colors
+        if not assigned:
+            existing[cat] = palette[base]
+
+    GLOBAL_COLOR_REGISTRY[column] = existing
+    colors = df[column].map(existing)
+    return colors, existing
 
 
 def _static_scatter(
@@ -84,14 +207,13 @@ def _static_scatter(
     ax.set_xlabel("Number of Features", labelpad=10)
     ax.set_ylabel(metric_name, labelpad=10)
     ax.set_title(f"{title}", pad=15, fontsize=20)
-    # Place legend outside the plot at the bottom-right
+    # Place legend inside bottom-right
     ax.legend(
         title=group_name,
         loc="lower right",
         borderaxespad=0.0,
     )
 
-    # sns.despine(ax=ax)
     # Reserve a margin on the right so the outside legend is not clipped
     plt.tight_layout(rect=(0, 0, 0.85, 1))
     plt.show()
@@ -141,35 +263,67 @@ def plot_trend_over_time(
     trend_color="C0",
     font_scale=None,
     dpi=None,
+    first_n: int | None = None,
+    y_log_scale: bool = False,
 ):
     """
-    Plot raw points and a rolling-mean trend of y_col over time_col.
+    Plot raw points and a rolling-mean trend of y_col across trials ordered by
+    time_col. The x-axis is the trial index (1..N) after sorting by time.
+
       df:         DataFrame with your data
       y_col:      name of the metric column (e.g. "metrics.rmse_val")
-      time_col:   name of the datetime column (default "start_time")
+      time_col:   name of the datetime column used for ordering (default "start_time")
       window:     rolling window size
+    first_n:    if provided, only the first N trials (after time sort) are plotted
+    y_log_scale: if True, plot the y-axis on a logarithmic scale (requires
+             all y values to be strictly positive)
     """
     df = df.copy()
     df[time_col] = pd.to_datetime(df[time_col], format="ISO8601")
     df = df.sort_values(time_col)
+    if first_n is not None and first_n > 0:
+        df = df.head(first_n)
+    # Index 1..N on x-axis
+    df["trial_index"] = range(1, len(df) + 1)
     df["smoothed"] = df[y_col].rolling(window=window, center=True, min_periods=1).mean()
 
     _set_seaborn_context(font_scale)
     plt.figure(figsize=figsize or GLOBAL_FIGSIZE, dpi=dpi or GLOBAL_DPI)
-    plt.scatter(df[time_col], df[y_col], color=raw_color, alpha=raw_alpha, label="Raw")
+    plt.scatter(
+        df["trial_index"], df[y_col], color=raw_color, alpha=raw_alpha, label="Raw"
+    )
     plt.plot(
-        df[time_col],
+        df["trial_index"],
         df["smoothed"],
         color=trend_color,
         linewidth=2,
         label=f"Rolling mean (w={window})",
     )
+    plt.xlabel("Trial number")
 
-    plt.xlabel(time_col)
-    plt.ylabel(y_col)
-    plt.title(f"{title_prefix} - {y_col} trend over {time_col}")
-    plt.xticks(rotation=45)
+    title_suffix = "across trials"
+    if first_n is not None and first_n > 0:
+        title_suffix += f" (first {len(df)} trials)"
+
+    if y_col == "metrics.rmse_val":
+        y_label = "RMSE Validation"
+    else:
+        y_label = y_col
+
+    plt.ylabel(y_label)
+    plt.title(f"{title_prefix} - {y_label} {title_suffix}")
+    plt.xticks(rotation=0)
     plt.legend()
+    # Optionally apply log scale on Y (requires positive values)
+    if y_log_scale:
+        if (df[y_col] <= 0).any() or (df["smoothed"] <= 0).any():
+            print(
+                "[plot_trend_over_time] y_log_scale=True requested but some y values "
+                "are <= 0; keeping linear scale."
+            )
+        else:
+            plt.yscale("log")
+            plt.ylabel(f"{y_label} (log scale)")
     plt.grid(True)
     plt.tight_layout()
     plt.show()
@@ -234,6 +388,7 @@ def multi_boxplot_metric(
     sep_alpha: float = 0.85,
     title: str = "",
     alpha: float = 0.05,
+    x_log_scale: bool = False,
 ):
     """Create a stacked (row-wise) set of horizontal boxplots sharing the same x-axis.
 
@@ -264,6 +419,9 @@ def multi_boxplot_metric(
         Width parameter passed to seaborn.boxplot.
     showfliers : bool
         Whether to show outliers.
+    x_log_scale : bool, default False
+        If True, set the shared x-axis to logarithmic scale (requires all
+        metric values to be strictly positive).
 
     Notes
     -----
@@ -274,18 +432,10 @@ def multi_boxplot_metric(
     The same formatted p-value label ("p=" or "p<") is also annotated in the
     top-right corner of each corresponding subplot.
 
-    The parameter `test_method` is deprecated and ignored; Kruskal–Wallis is
-    always used.
-
     Returns
     -------
     fig, axes : matplotlib Figure and list of Axes
     """
-    if not group_specs:
-        raise ValueError(
-            "group_specs must contain at least one (group_col, group_name) pair"
-        )
-
     _set_seaborn_context(font_scale)
 
     n = len(group_specs)
@@ -304,24 +454,23 @@ def multi_boxplot_metric(
         axes = [axes]
 
     # Determine a consistent color map per unique category per group.
-    # (Simpler: independent palette for each group column.)
     palette_cache = {}
     p_values = []  # collect (group_label, p_value or None)
 
+    MISSING_CATEGORY_LABEL = "nan"
     for ax, (gcol, glabel) in zip(axes, group_specs):
-        if gcol not in trials.columns:
-            ax.text(0.5, 0.5, f"Missing column: {gcol}", ha="center", va="center")
-            ax.set_axis_off()
-            continue
-        subset = trials[[gcol, metric_col]].dropna()
+        # Keep rows with metric present; map NaN groups to a visible category label
+        subset = trials[[gcol, metric_col]].copy()
+        subset = subset[subset[metric_col].notna()]
+        subset[gcol] = subset[gcol].astype(object)
+        subset.loc[subset[gcol].isna(), gcol] = MISSING_CATEGORY_LABEL
         if subset.empty:
             ax.text(0.5, 0.5, f"No data for {glabel}", ha="center", va="center")
             ax.set_axis_off()
             continue
-
         # Color map: reuse if already computed for this column
         if gcol not in palette_cache:
-            _, palette_cache[gcol] = create_color_map(subset, gcol)
+            _, palette_cache[gcol] = get_consistent_color_map(subset, gcol)
         color_map = palette_cache[gcol]
 
         order = None
@@ -329,7 +478,6 @@ def multi_boxplot_metric(
             order = (
                 subset.groupby(gcol)[metric_col].median().sort_values().index.tolist()
             )
-
         sns.boxplot(
             x=metric_col,
             y=gcol,
@@ -372,16 +520,24 @@ def multi_boxplot_metric(
                     transform=ax.transAxes,
                     ha="right",
                     va="top",
-                    # fontsize=10,
-                    # fontweight="bold",
-                    # bbox=dict(facecolor="white", alpha=0.7, edgecolor="none",
-                    # pad=2.5),
                 )
             p_values.append((glabel, p_value))
         except Exception:
             # If the test fails (e.g., insufficient data), skip annotation silently
             p_values.append((glabel, None))
 
+    # Optionally apply logarithmic scale to the shared x-axis
+    if x_log_scale:
+        metric_vals = trials[metric_col].dropna().values
+        if (metric_vals <= 0).any():
+            print(
+                "[multi_boxplot_metric] x_log_scale=True requested but some metric "
+                "values are <= 0; keeping linear scale."
+            )
+        else:
+            for ax in axes:
+                ax.set_xscale("log")
+            metric_name = metric_name + " (log scale)"
     # Shared X label on last axis
     axes[-1].set_xlabel(metric_name, labelpad=12)
 
