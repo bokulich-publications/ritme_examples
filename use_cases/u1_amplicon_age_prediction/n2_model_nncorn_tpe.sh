@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name="u1_nncorn_tpe3"
+#SBATCH --job-name="u1_nncorn_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=150
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=1536
-#SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs_final/logs/%x_out.txt"
+#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
@@ -18,7 +18,7 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u1_nncorn_tpe3.json"
+CONFIG="config/u1_nncorn_tpe.json"
 # -> path to the metadata file
 PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/work/bokulich/adamova/ritme_usecase_runs_final"
+LOGS_DIR="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u1"
 # -> group columns for train-test split

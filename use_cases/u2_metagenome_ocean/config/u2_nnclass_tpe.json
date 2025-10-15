@@ -6,7 +6,7 @@
     "nn_class"
   ],
   "max_cuncurrent_trials": 80,
-  "num_trials": 2500,
+  "time_budget_s": 428400,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,

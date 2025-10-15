@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=30
 #SBATCH --time=23:59:59
 #SBATCH --mem-per-cpu=3072
-#SBATCH --output="/cluster/work/bokulich/adamova/ritme_usecase_runs_final/logs_automl/%x_out.txt"
+#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs_automl/%x_out.txt"
 #SBATCH --open-mode=append
 
 set -x
