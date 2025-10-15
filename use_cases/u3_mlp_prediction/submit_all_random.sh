@@ -6,10 +6,10 @@
 set -euo pipefail
 
 scripts=(
-  n2_model_metacardis_log_linreg_random.sh
-  n2_model_metacardis_log_nnreg_random.sh
-  n2_model_metacardis_log_rf_random.sh
-  n2_model_metacardis_log_xgb_random.sh
+  n2_model_galaxy_log_linreg_random.sh
+  n2_model_galaxy_log_nnreg_random.sh
+  n2_model_galaxy_log_rf_random.sh
+  n2_model_galaxy_log_xgb_random.sh
 )
 
 for s in "${scripts[@]}"; do
