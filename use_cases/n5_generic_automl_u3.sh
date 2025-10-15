@@ -18,8 +18,7 @@ python ../src/generic_automl.py \
     --path-to-features ../data/u3_mlp_nishijima24/galaxy_otu_table.tsv \
     --path-to-md ../data/u3_mlp_nishijima24/md_galaxy.tsv \
     --target count_log10 \
-    --single-best \
-    --restricted-model gradient_boosting
+    --single-best
 
 # "ard_regression", "random_forest", "gradient_boosting", "mlp",
 

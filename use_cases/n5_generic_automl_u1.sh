@@ -18,8 +18,7 @@ python ../src/generic_automl.py \
     --path-to-features ../data/u1_subramanian14/otu_table_subr14_wq.tsv \
     --path-to-md ../data/u1_subramanian14/md_subr14.tsv \
     --target age_months \
-    --single-best \
-    --restricted-model gradient_boosting
+    --single-best
 
 # "ard_regression", "random_forest", "gradient_boosting", "mlp",
 

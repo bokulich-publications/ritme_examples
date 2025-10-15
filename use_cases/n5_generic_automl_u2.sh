@@ -18,8 +18,7 @@ python ../src/generic_automl.py \
     --path-to-features ../data/u2_tara_ocean/otu_table_tara_ocean.tsv \
     --path-to-md ../data/u2_tara_ocean/md_tara_ocean.tsv \
     --target temperature_mean_degc \
-    --single-best \
-    --restricted-model ard_regression
+    --single-best
 
 # "ard_regression", "random_forest", "gradient_boosting", "mlp",
 

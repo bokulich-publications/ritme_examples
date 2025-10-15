@@ -92,7 +92,17 @@ def main():
             **common_kwargs,
         )
     else:
-        automl = autosklearn.regression.AutoSklearnRegressor(**common_kwargs)
+        automl = autosklearn.regression.AutoSklearnRegressor(
+            include={
+                "regressor": [
+                    "ard_regression",
+                    "gradient_boosting",
+                    "mlp",
+                    "random_forest",
+                ]
+            },
+            **common_kwargs,
+        )
 
     automl.fit(X_train, y_train)
     print("Print model leaderboard:")
