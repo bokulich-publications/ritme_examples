@@ -12,7 +12,7 @@
 set -x
 
 python ../src/generic_automl.py \
-    --total-time-s 111576 \
+    --total-time-s 428400 \
     --usecase u3 \
     --data-splits-folder u3_mlp_prediction/data_splits_u3_galaxy_log \
     --path-to-features ../data/u3_mlp_nishijima24/galaxy_otu_table.tsv \

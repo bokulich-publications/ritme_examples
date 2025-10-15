@@ -12,7 +12,7 @@
 set -x
 
 python ../src/generic_automl.py \
-    --total-time-s 35879 \
+    --total-time-s 428400 \
     --usecase u2 \
     --data-splits-folder u2_metagenome_ocean/data_splits_u2 \
     --path-to-features ../data/u2_tara_ocean/otu_table_tara_ocean.tsv \

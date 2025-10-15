@@ -12,7 +12,7 @@
 set -x
 
 python ../src/generic_automl.py \
-    --total-time-s 203400 \
+    --total-time-s 428400 \
     --usecase u1 \
     --data-splits-folder u1_amplicon_age_prediction/data_splits_u1 \
     --path-to-features ../data/u1_subramanian14/otu_table_subr14_wq.tsv \
