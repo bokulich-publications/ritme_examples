@@ -1,6 +1,7 @@
 import hashlib
 import math
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.io as pio
@@ -332,6 +333,7 @@ def plot_trend_over_time_multi_models(
     raw_color: str = "gray",
     raw_alpha: float = 0.4,
     trend_color: str = "C0",
+    std_alpha: float = 0.15,
     font_scale: float | None = None,
     dpi: int | None = None,
     first_n: int | None = None,
@@ -411,9 +413,9 @@ def plot_trend_over_time_multi_models(
         d = d[[y_col]].copy()
 
         d["trial_index"] = range(1, len(d) + 1)
-        d["smoothed"] = (
-            d[y_col].rolling(window=window, center=True, min_periods=1).mean()
-        )
+        roll = d[y_col].rolling(window=window, center=True, min_periods=1)
+        d["smoothed"] = roll.mean()
+        d["smoothed_std"] = roll.std(ddof=0)
         max_len = max(max_len, len(d))
         series.append((model, d))
 
@@ -454,17 +456,33 @@ def plot_trend_over_time_multi_models(
             linewidth=2,
             label=f"Rolling mean (w={window})",
         )
+        # Shaded band for ±1 std around the rolling mean
+        if "smoothed_std" in d.columns:
+            lower = d["smoothed"] - d["smoothed_std"]
+            upper = d["smoothed"] + d["smoothed_std"]
+            ax.fill_between(
+                d["trial_index"],
+                lower,
+                upper,
+                color=trend_color,
+                alpha=std_alpha,
+                linewidth=0,
+                label=("±1 std" if ax is axes[0] else None),
+            )
         ax.set_title(f"{title_prefix}{model}")
         ax.grid(True)
         # Y label on the third subplot only to reduce clutter
-        if ax is axes[2]:
+        if ax is axes[-1]:
             y_label_printed = y_label
         else:
             y_label_printed = ""
         ax.set_ylabel(y_label_printed)
         # Optional log scale per subplot if values are positive
         if y_log_scale:
-            if (d[y_col] <= 0).any() or (d["smoothed"] <= 0).any():
+            has_nonpos = (d[y_col] <= 0).any() or (d["smoothed"] <= 0).any()
+            if "smoothed_std" in d.columns:
+                has_nonpos = has_nonpos or (d["smoothed_std"] <= 0).any()
+            if has_nonpos:
                 # keep linear for this subplot
                 pass
             else:
@@ -619,7 +637,6 @@ def multi_boxplot_metric(
     )
     if n == 1:
         axes = [axes]
-
     # Determine a consistent color map per unique category per group.
     palette_cache = {}
     p_values = []  # collect (group_label, p_value or None)
@@ -754,3 +771,385 @@ def multi_boxplot_metric(
             else:
                 print(f"  {glabel}: p={p:.3g}")
     return fig, axes
+
+
+def plot_recent_trials_barplot(
+    df: pd.DataFrame,
+    y_col: str = "metrics.rmse_val",
+    group_col: str = "params.data_selection",
+    time_col: str = "start_time",
+    n_last: int = 200,
+    title: str | None = None,
+    figsize: tuple | None = None,
+    font_scale: float | None = None,
+    dpi: int | None = None,
+    y_log_scale: bool = False,
+    window: int = 20,
+):
+    """
+    Plot a bar chart of the last N conducted trials (ordered by time),
+    with the y-axis showing the metric (e.g., validation RMSE) and bar
+    colors indicating the category in `group_col` (e.g., "params.data_selection").
+
+    Inputs
+    - df: DataFrame containing at least [y_col, group_col, time_col].
+    - y_col: Metric column to plot on the y-axis (default: "metrics.rmse_val").
+    - group_col: Categorical column used to color the bars.
+    - time_col: Column used to order trials over time (default: "start_time").
+    - n_last: Number of most recent trials to display (default: 200).
+    - title: Optional title for the figure.
+    - figsize, font_scale, dpi: Optional overrides of global plotting settings.
+    - y_log_scale: If True, use a logarithmic y-axis (requires positive values).
+
+    Returns
+    - fig, ax: The Matplotlib figure and axes objects.
+
+    Notes
+    - Bars are ordered from older (left) to newer (right) among the last N trials.
+    - NaN values in the group column are plotted under a visible category label "nan".
+    """
+    # Validate required columns
+    required = {y_col, group_col, time_col}
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"Missing required columns for plot_recent_trials_barplot: {missing}"
+        )
+
+    # Work on a copy; parse time and sort
+    d = df[[y_col, group_col, time_col]].copy()
+    d[time_col] = pd.to_datetime(d[time_col], format="ISO8601", errors="coerce")
+    d = d.dropna(subset=[time_col])
+    d = d.sort_values(time_col)
+
+    # Keep last N trials, drop rows without metric
+    if n_last is not None and n_last > 0:
+        d = d.tail(n_last)
+    d = d.dropna(subset=[y_col])
+
+    if d.empty:
+        raise ValueError("No data available to plot after filtering and dropping NaNs.")
+
+    # Map NaN groups to a visible label for legend consistency
+    MISSING_CATEGORY_LABEL = "nan"
+    d[group_col] = d[group_col].astype(object)
+    d.loc[d[group_col].isna(), group_col] = MISSING_CATEGORY_LABEL
+
+    # Create sequential x positions (1..k) in chronological order
+    d["trial_index"] = range(1, len(d) + 1)
+
+    # We keep positions as 1..k; x tick labels are hidden for clarity.
+
+    # Use consistent color mapping across figures for categories in group_col
+    _, color_map = get_consistent_color_map(d, group_col)
+    bar_colors = d[group_col].map(color_map)
+
+    # Set plotting context
+    _set_seaborn_context(font_scale)
+
+    fig, ax = plt.subplots(
+        figsize=figsize or (max(GLOBAL_FIGSIZE[0], 10), GLOBAL_FIGSIZE[1]),
+        dpi=dpi or GLOBAL_DPI,
+    )
+
+    # Bar plot uses equally spaced positions 1..k,
+    # but x tick labels show the actual trial number
+    positions = list(d["trial_index"].values)
+    ax.bar(positions, d[y_col], color=bar_colors, width=0.9, edgecolor="none")
+
+    # Rolling mean over the selected last N trials (ordered by time)
+    d["smoothed"] = d[y_col].rolling(window=window, center=True, min_periods=1).mean()
+    line_color = "black"
+    (line,) = ax.plot(
+        positions,
+        d["smoothed"],
+        color=line_color,
+        linewidth=2,
+        label=f"Rolling mean (w={window})",
+    )
+
+    # Labels and title
+    if y_col == "metrics.rmse_val":
+        y_label = "RMSE Validation"
+    else:
+        y_label = y_col
+    ax.set_ylabel(y_label)
+    ax.set_xlabel("Last N trials by time →")
+    if title is not None:
+        ax.set_title(title)
+
+    # Optional log scale with safety check
+    if y_log_scale:
+        if (d[y_col] <= 0).any():
+            # keep linear if non-positive values exist
+            pass
+        else:
+            ax.set_yscale("log")
+
+    # Legend: include trend line and category patches, placed outside on the right
+    present_cats = list(pd.unique(d[group_col]))
+    handles = [line]
+    handles += [
+        plt.matplotlib.patches.Patch(color=color_map[c], label=str(c))
+        for c in present_cats
+        if c in color_map
+    ]
+    if handles:
+        ax.legend(
+            handles=handles,
+            title=f"{group_col} / trend",
+            loc="center left",
+            bbox_to_anchor=(1.02, 0.5),
+            borderaxespad=0.0,
+            frameon=True,
+            fontsize=9,
+            title_fontsize=9,
+            labelspacing=0.4,
+            handlelength=1.2,
+        )
+
+    # Styling
+    sns.despine(ax=ax)
+    ax.grid(True, axis="y", alpha=0.25)
+    # Reduce x tick clutter for large N and set tick labels to actual trial numbers
+    k = len(d)
+    if k > 40:
+        step = max(1, k // 20)
+        tick_positions = list(range(1, k + 1, step))
+    else:
+        tick_positions = list(range(1, k + 1))
+    ax.set_xticks(tick_positions)
+    # Remove x tick labels for a cleaner look
+    ax.set_xticklabels([])
+    ax.set_xlim(0.5, len(d) + 0.5)
+
+    # Reserve space on the right for the outside legend
+    plt.tight_layout(rect=(0, 0, 0.82, 1))
+    plt.show()
+    return fig, ax
+
+
+def plot_recent_param_binned_over_time(
+    df: pd.DataFrame,
+    param_col: str,
+    group_col: str = "params.data_selection",
+    time_col: str = "start_time",
+    n_last: int = 200,
+    n_bins: int = 6,
+    binning: str = "quantile",  # "quantile" or "uniform"
+    title: str | None = None,
+    figsize: tuple | None = None,
+    font_scale: float | None = None,
+    dpi: int | None = None,
+    y_col: str = "metrics.rmse_val",
+    y_log_scale: bool = False,
+    window: int = 20,
+    palette_name: str = "viridis",
+    show_colorbar: bool = False,
+    colorbar_label: str | None = None,
+):
+    """
+    Plot the last N trials over time (x-axis) as a bar chart of a metric
+    (default: RMSE validation) on the y-axis. Bars are colored by the value
+    range (bin) of the provided continuous parameter `param_col`.
+
+    Examples: visualize how performance evolved while coloring by
+    binned ranges of `params.n_estimators`.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing at least [param_col, y_col, time_col].
+    param_col : str
+        Name of the continuous parameter column to bin (e.g., "params.n_estimators").
+    group_col : str, default "params.data_selection"
+        Unused for coloring in this plot; retained for backward compatibility.
+    time_col : str, default "start_time"
+        Column used to order trials over time; parsed via pandas to_datetime.
+    y_col : str, default "metrics.rmse_val"
+        Metric column for bar heights (y-axis).
+    n_last : int, default 200
+        Number of most recent trials to display.
+    n_bins : int, default 6
+        Number of bins to use for the parameter.
+    binning : {"quantile", "uniform"}, default "quantile"
+        Binning strategy: quantile-based (roughly equal counts) or uniform-width.
+    title : str | None
+        Optional plot title.
+    figsize, font_scale, dpi : optional
+        Plot styling overrides. Falls back to module-level defaults.
+    y_log_scale : bool, default False
+        If True, use a logarithmic y-axis (requires strictly positive values).
+    window : int, default 20
+        Window size for rolling-mean line over the bars.
+    palette_name : str, default "viridis"
+        Name of the sequential palette to map low->high bins to colors.
+        Examples: "viridis", "plasma", "magma", "cividis".
+    show_colorbar : bool, default False
+        If True, display a colorbar in the right panel to emphasize the
+        low→high mapping for the parameter values.
+    colorbar_label : str | None, default None
+        Optional label for the colorbar; falls back to `param_col`.
+
+    Returns
+    -------
+    fig, ax : matplotlib Figure and Axes
+    """
+    required = {param_col, y_col, time_col}
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(
+            "Missing required columns for "
+            f"plot_recent_param_binned_over_time: {missing}"
+        )
+
+    # Work on a copy; parse time and sort chronologically
+    d = df[[param_col, y_col, time_col]].copy()
+    d[time_col] = pd.to_datetime(d[time_col], format="ISO8601", errors="coerce")
+    # d = d.dropna(subset=[time_col, param_col, y_col])
+    d = d.sort_values(time_col)
+    if n_last is not None and n_last > 0:
+        d = d.tail(n_last)
+
+    # Determine the bins
+    try:
+        if binning == "quantile":
+            binned = pd.qcut(d[param_col], q=n_bins, duplicates="drop")
+        else:
+            binned = pd.cut(d[param_col], bins=n_bins)
+    except Exception:
+        # Fallback to uniform bins if quantile fails (e.g., many duplicates)
+        binned = pd.cut(d[param_col], bins=n_bins)
+
+    # Create ordered categorical labels for bins and map to colors
+    binned = binned.astype("category")
+    categories = list(binned.cat.categories)
+    # Human-friendly bin labels for legend
+    bin_labels = [
+        (
+            f"[{c.left:.3g}, {c.right:.3g}"
+            f"{']' if c.closed in ('right', 'both') else ')'}"
+            if hasattr(c, "left")
+            else str(c)
+        )
+        for c in categories
+    ]
+    # Store labels as string in a new column used for color mapping
+    d["param_bin_label"] = [bin_labels[categories.index(cat)] for cat in binned]
+
+    # Build a sequential, low-to-high palette for the bins (ordered by value)
+    # Use a perceptually uniform, colorblind-friendly colormap
+    seq_palette = sns.color_palette(palette_name, n_colors=len(categories))
+    # Map each ordered bin label to a corresponding color (low->high)
+    label_to_color = {lbl: seq_palette[i] for i, lbl in enumerate(bin_labels)}
+
+    # Sequential x positions (older -> newer)
+    d["x_pos"] = range(1, len(d) + 1)
+
+    _set_seaborn_context(font_scale)
+    # Create a two-column layout: left for plot, right for legend with fixed width
+    fig = plt.figure(
+        figsize=figsize or (max(GLOBAL_FIGSIZE[0], 10), GLOBAL_FIGSIZE[1]),
+        dpi=dpi or GLOBAL_DPI,
+    )
+    # Fix the relative space: keep left plot area constant irrespective of
+    # legend/colorbar footprint
+    gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[1.0, 0.35], wspace=0.05)
+    ax = fig.add_subplot(gs[0, 0])
+    right_gs = gs[0, 1].subgridspec(2, 1, height_ratios=[3.0, 1.0], hspace=0.2)
+    legend_ax = fig.add_subplot(right_gs[0, 0])
+    legend_ax.axis("off")
+    # Colorbar axis (created only if requested)
+    cbar_ax = fig.add_subplot(right_gs[1, 0])
+    cbar_ax.set_visible(False)
+
+    # Bars: height is y_col (metric), color indicates parameter bin
+    positions = list(d["x_pos"].values)
+    # Map bar colors by the ordered bin labels using the sequential palette
+    bar_colors = d["param_bin_label"].map(label_to_color)
+    ax.bar(positions, d[y_col], color=bar_colors, width=0.9, edgecolor="none")
+
+    # Rolling mean line over bar heights
+    d["smoothed"] = d[y_col].rolling(window=window, center=True, min_periods=1).mean()
+    (trend_line,) = ax.plot(
+        positions,
+        d["smoothed"],
+        color="black",
+        linewidth=1,
+        label=f"Rolling mean (w={window})",
+    )
+
+    # Axis labels and title
+    if y_col == "metrics.rmse_val":
+        y_label = "RMSE Validation"
+    else:
+        y_label = y_col
+    ax.set_ylabel(y_label)
+    ax.set_xlabel("Last N trials by time →")
+    if title:
+        ax.set_title(title)
+
+    # Optional log scale with safety check
+    if y_log_scale:
+        if (d[y_col] <= 0).any():
+            pass
+        else:
+            ax.set_yscale("log")
+
+    # Legend in the fixed right panel: parameter bin patches ordered low->high
+    # plus the rolling-mean trend line
+    present = set(pd.unique(d["param_bin_label"]))
+    ordered_present_labels = [lbl for lbl in bin_labels if lbl in present]
+    bin_handles = [
+        plt.matplotlib.patches.Patch(color=label_to_color[lbl], label=str(lbl))
+        for lbl in ordered_present_labels
+    ]
+    handles = [trend_line] + bin_handles
+    if handles:
+        legend_ax.legend(
+            handles=handles,
+            title=f"Trend & {param_col.replace('params.', '').replace('_', ' ')} bins",
+            loc="center left",
+            borderaxespad=0.0,
+            frameon=True,
+            fontsize=9,
+            title_fontsize=9,
+            labelspacing=0.4,
+            handlelength=1.2,
+        )
+
+    # Optional colorbar below the legend to emphasize low→high mapping
+    if show_colorbar:
+        # Determine value range from available (non-NaN) parameter values
+        param_vals = pd.to_numeric(d[param_col], errors="coerce").dropna()
+        if len(param_vals) > 0:
+            vmin = float(param_vals.min())
+            vmax = float(param_vals.max())
+            cmap = mpl.cm.get_cmap(palette_name)
+            norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
+            sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
+            sm.set_array([])
+            cbar_ax.set_visible(True)
+            cbar = fig.colorbar(
+                sm,
+                cax=cbar_ax,
+                orientation="horizontal",
+            )
+            cbar.ax.tick_params(labelsize=8)
+            cbar.set_label(colorbar_label or param_col, fontsize=9)
+
+    # X ticks and bounds; hide labels for cleanliness
+    k = len(d)
+    if k > 40:
+        step = max(1, k // 20)
+        ax.set_xticks(list(range(1, k + 1, step)))
+    else:
+        ax.set_xticks(list(range(1, k + 1)))
+    ax.set_xticklabels([])
+    ax.set_xlim(0.5, k + 0.5)
+
+    sns.despine(ax=ax)
+    ax.grid(True, axis="y", alpha=0.25)
+    plt.tight_layout()
+    plt.show()
+    return fig, ax
