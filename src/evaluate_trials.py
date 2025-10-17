@@ -847,59 +847,60 @@ def plot_recent_trials_barplot(
     # Set plotting context
     _set_seaborn_context(font_scale)
 
-    fig, ax = plt.subplots(
+    # Two-column layout: left plot, right legend (to match param_binned style)
+    fig = plt.figure(
         figsize=figsize or (max(GLOBAL_FIGSIZE[0], 10), GLOBAL_FIGSIZE[1]),
         dpi=dpi or GLOBAL_DPI,
     )
+    gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[1.0, 0.35], wspace=0.05)
+    ax = fig.add_subplot(gs[0, 0])
+    right_gs = gs[0, 1].subgridspec(2, 1, height_ratios=[3.0, 1.0], hspace=0.2)
+    legend_ax = fig.add_subplot(right_gs[0, 0])
+    legend_ax.axis("off")
+    # Placeholder colorbar axis for parity with other plot
+    cbar_ax = fig.add_subplot(right_gs[1, 0])
+    cbar_ax.set_visible(False)
 
-    # Bar plot uses equally spaced positions 1..k,
-    # but x tick labels show the actual trial number
+    # Bars and trend line
     positions = list(d["trial_index"].values)
     ax.bar(positions, d[y_col], color=bar_colors, width=0.9, edgecolor="none")
-
-    # Rolling mean over the selected last N trials (ordered by time)
     d["smoothed"] = d[y_col].rolling(window=window, center=True, min_periods=1).mean()
-    line_color = "black"
-    (line,) = ax.plot(
+    (trend_line,) = ax.plot(
         positions,
         d["smoothed"],
-        color=line_color,
-        linewidth=2,
+        color="black",
+        linewidth=1,
         label=f"Rolling mean (w={window})",
     )
 
-    # Labels and title
-    if y_col == "metrics.rmse_val":
-        y_label = "RMSE Validation"
-    else:
-        y_label = y_col
+    # Axis labels and optional title
+    y_label = "RMSE Validation" if y_col == "metrics.rmse_val" else y_col
     ax.set_ylabel(y_label)
     ax.set_xlabel("Last N trials by time →")
-    if title is not None:
+    if title:
         ax.set_title(title)
 
-    # Optional log scale with safety check
+    # Optional log scale on y
     if y_log_scale:
-        if (d[y_col] <= 0).any():
-            # keep linear if non-positive values exist
-            pass
-        else:
+        if not (d[y_col] <= 0).any():
             ax.set_yscale("log")
 
-    # Legend: include trend line and category patches, placed outside on the right
-    present_cats = list(pd.unique(d[group_col]))
-    handles = [line]
-    handles += [
+    # Legend in right panel: trend + categories (ordered by color map keys)
+    present_cats = set(pd.unique(d[group_col]))
+    ordered_present = [c for c in color_map.keys() if c in present_cats]
+    cat_handles = [
         plt.matplotlib.patches.Patch(color=color_map[c], label=str(c))
-        for c in present_cats
-        if c in color_map
+        for c in ordered_present
     ]
+    handles = [trend_line] + cat_handles
     if handles:
-        ax.legend(
+        legend_ax.legend(
             handles=handles,
-            title=f"{group_col} / trend",
+            title=(
+                "Trend & "
+                f"{group_col.replace('params.', '').replace('_', ' ')} categories"
+            ),
             loc="center left",
-            bbox_to_anchor=(1.02, 0.5),
             borderaxespad=0.0,
             frameon=True,
             fontsize=9,
@@ -908,23 +909,19 @@ def plot_recent_trials_barplot(
             handlelength=1.2,
         )
 
-    # Styling
-    sns.despine(ax=ax)
-    ax.grid(True, axis="y", alpha=0.25)
-    # Reduce x tick clutter for large N and set tick labels to actual trial numbers
+    # X ticks and limits; hide labels for cleanliness
     k = len(d)
     if k > 40:
         step = max(1, k // 20)
-        tick_positions = list(range(1, k + 1, step))
+        ax.set_xticks(list(range(1, k + 1, step)))
     else:
-        tick_positions = list(range(1, k + 1))
-    ax.set_xticks(tick_positions)
-    # Remove x tick labels for a cleaner look
+        ax.set_xticks(list(range(1, k + 1)))
     ax.set_xticklabels([])
-    ax.set_xlim(0.5, len(d) + 0.5)
+    ax.set_xlim(0.5, k + 0.5)
 
-    # Reserve space on the right for the outside legend
-    plt.tight_layout(rect=(0, 0, 0.82, 1))
+    sns.despine(ax=ax)
+    ax.grid(True, axis="y", alpha=0.25)
+    plt.tight_layout()
     plt.show()
     return fig, ax
 
