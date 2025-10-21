@@ -3,7 +3,7 @@
 #SBATCH --job-name="u2_nnclass_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=100
+#SBATCH --cpus-per-task=80
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=5120
 #SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
