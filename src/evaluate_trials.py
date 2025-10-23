@@ -433,7 +433,7 @@ def plot_trend_over_time_multi_models(
     fig, axes = plt.subplots(
         nrows=len(models),
         ncols=1,
-        sharex=True,
+        sharex=False,
         figsize=figsize,
         dpi=dpi or GLOBAL_DPI,
     )
@@ -496,11 +496,8 @@ def plot_trend_over_time_multi_models(
                 if y_label_printed != "":
                     ax.set_ylabel(y_label_printed + " (log scale)")
 
-    # Shared x-label and limits
+    # X-labels (not shared): label only the last subplot to reduce clutter
     for ax in axes:
-        if max_len > 0:
-            ax.set_xlim(1, max_len)
-        # X label on last subplot only to reduce clutter
         if ax is axes[-1]:
             ax.set_xlabel("Trial number")
         else:
