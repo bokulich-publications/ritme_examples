@@ -267,7 +267,8 @@ def plot_complexity_vs_metric(
     Parameters allow optional override of global figure settings.
     """
     _set_seaborn_context(font_scale)
-    _, color_map = create_color_map(trials, "params.model")
+    d = trials[["metrics.nb_features", metric_col, group_col]].copy()
+    _, color_map = get_consistent_color_map(d, group_col)
 
     fig, ax = plt.subplots(figsize=figsize or GLOBAL_FIGSIZE, dpi=dpi or GLOBAL_DPI)
     sns.scatterplot(
@@ -275,16 +276,16 @@ def plot_complexity_vs_metric(
         y=metric_col,
         hue=group_col,
         palette=color_map,
-        data=trials,
+        data=d,
         s=50,
         ax=ax,
-        # edgecolor="black",
-        # linewidth=0.01,
+        edgecolor="grey",
+        linewidth=0.02,
     )
     # Optionally apply log scale on X (requires positive values)
     x_label = "Number of Features"
     if x_log_scale:
-        x_vals = trials["metrics.nb_features"].dropna().values
+        x_vals = d["metrics.nb_features"].dropna().values
         if (x_vals <= 0).any():
             print(
                 "[plot_complexity_vs_metric] x_log_scale=True requested but some x "
@@ -298,11 +299,22 @@ def plot_complexity_vs_metric(
     ax.set_ylabel(metric_name, labelpad=10)
     ax.set_title(f"{title}", pad=15, fontsize=20)
     # Place legend inside bottom-right
-    ax.legend(
-        title=group_name,
-        loc="lower right",
-        borderaxespad=0.0,
-    )
+    # Reorder legend to follow the consistent color map order but only include
+    # categories present in the filtered data
+    present = set(pd.unique(d[group_col]))
+    ordered_labels = [c for c in color_map.keys() if c in present]
+    handles, labels = ax.get_legend_handles_labels()
+    # Build mapping from label to handle
+    hmap = {lbl: h for h, lbl in zip(handles, labels) if lbl in ordered_labels}
+    ordered_handles = [hmap[lbl] for lbl in ordered_labels if lbl in hmap]
+    if ordered_handles:
+        ax.legend(
+            ordered_handles,
+            ordered_labels,
+            title=group_name,
+            loc="lower right",
+            borderaxespad=0.0,
+        )
 
     # Reserve a margin on the right so the outside legend is not clipped
     plt.tight_layout(rect=(0, 0, 0.85, 1))
@@ -406,7 +418,8 @@ def plot_trend_over_time_multi_models(
     # Determine models to plot
     if models is None:
         models = list(pd.unique(df[group_col]))
-    models = sorted([m for m in models if pd.notna(m)])
+    models = [m for m in models if pd.notna(m)]
+
     # Prepare per-model series and track max length for shared x-axis
     series = []
     max_len = 0
