@@ -18,6 +18,10 @@ python ../src/extract_mlflow_logs.py --dirs \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u1_rf_tpe \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u1_xgb_tpe \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u1_xgb_tpe_restricted \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u1_trac_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u1_nnclass_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u2_trac_tpe \
+/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u2_nnclass_tpe \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u2_linreg_tpe \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u2_linreg_tpe_restricted \
 /cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/u2_nncorn_tpe \
