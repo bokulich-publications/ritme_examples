@@ -3,10 +3,10 @@
 #SBATCH --job-name="u1_nncorn_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=150
+#SBATCH --cpus-per-task=100
 #SBATCH --time=119:59:59
-#SBATCH --mem-per-cpu=1536
-#SBATCH --output="/scratch/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
+#SBATCH --mem-per-cpu=4096
+#SBATCH --output="/cluster/scratch/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
@@ -30,7 +30,7 @@ PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/scratch/adamova/ritme_usecase_runs_final_time"
+LOGS_DIR="/cluster/scratch/adamova/ritme_usecase_runs_final_time"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u1"
 # -> group columns for train-test split

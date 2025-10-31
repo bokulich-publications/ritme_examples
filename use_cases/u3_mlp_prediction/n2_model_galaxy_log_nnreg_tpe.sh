@@ -3,10 +3,10 @@
 #SBATCH --job-name="u3_galaxy_log_nnreg_tpe"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=80
-#SBATCH --mem-per-cpu=3584
+#SBATCH --cpus-per-task=100
+#SBATCH --mem-per-cpu=4096
 #SBATCH --time=119:59:59
-#SBATCH --output="/scratch/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
+#SBATCH --output="/cluster/scratch/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
@@ -28,7 +28,7 @@ PATH_TAX="../../data/u3_mlp_nishijima24/u3_taxonomy.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/scratch/adamova/ritme_usecase_runs_final_time"
+LOGS_DIR="/cluster/scratch/adamova/ritme_usecase_runs_final_time"
 # -> path to data splits
 PATH_DATA_SPLITS="data_splits_u3_galaxy_log"
 
