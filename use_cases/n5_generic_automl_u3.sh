@@ -3,10 +3,10 @@
 #SBATCH --job-name="n5_automl_u3"
 #SBATCH -A es_bokulich
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=50
+#SBATCH --cpus-per-task=100
 #SBATCH --time=119:59:59
 #SBATCH --mem-per-cpu=4096
-#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs_automl/%x_out.txt"
+#SBATCH --output="/cluster/scratch/adamova/ritme_usecase_runs_final_time/logs_automl/%x_out.txt"
 #SBATCH --open-mode=append
 
 set -x
@@ -19,7 +19,7 @@ python ../src/generic_automl.py \
     --path-to-md ../data/u3_mlp_nishijima24/md_galaxy.tsv \
     --target count_log10 \
     --single-best \
-    --restricted-model gradient_boosting
+    --restricted-model mlp
 
 # "ard_regression", "random_forest", "gradient_boosting", "mlp",
 
