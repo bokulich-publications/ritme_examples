@@ -189,6 +189,7 @@ use_cases/archive/*
 use_cases/merged_*
 use_cases/result_figures/*
 use_cases/results_original_setup.csv
+use_cases/extract_all_logs_v128_project.sh
 # any personal scratch files or folders
 x_*
 ~$*
