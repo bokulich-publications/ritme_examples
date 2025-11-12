@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name="u3_galaxy_log_xgb_tpe"
-#SBATCH -A es_bokulich
+#SBATCH -A SLURM_SHARE
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=50
 #SBATCH --mem-per-cpu=4096

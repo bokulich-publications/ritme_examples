@@ -1,7 +1,0 @@
-﻿experiment,model,num_trials,max_cuncurrent_trials,rmse_train,r2_train,pearson_corr_train,pearson_corr_train_pvalue,rmse_test,r2_test,pearson_corr_test,pearson_corr_test_pvalue,elapsed_time,launch_date
-u1_original,rf,,,1.011,0.97,0.988,0,3.498,0.669,0.831,0,00:05:23,
-u2_original,linreg,,,0.108,1,1,0,2.321,0.887,0.947,0,00:07:57,
-u3_galaxy_log_original,xgb,,,0.054,0.925,0.975,0,0.148,0.434,0.667,0,00:02:26,
-u1_automl,gradient_boosting,,,1.255,0.954,0.977,0.000,3.454,0.677,0.826,0.000,,
-u2_automl,random_forest,,,1.046,0.982,0.991,0.000,2.555,0.864,0.934,0.000,,
-u3_galaxy_automl,gradient_boosting,,,0.088,0.802,0.896,0.000,0.147,0.440,0.666,0.000,,

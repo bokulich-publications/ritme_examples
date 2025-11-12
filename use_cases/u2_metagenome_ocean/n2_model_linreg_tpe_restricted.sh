@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name="u2_linreg_tpe_restricted"
-#SBATCH -A es_bokulich
+#SBATCH -A SLURM_SHARE
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=30
 #SBATCH --time=119:59:59

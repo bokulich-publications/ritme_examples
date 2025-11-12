@@ -188,6 +188,7 @@ use_cases/automl/*
 use_cases/archive/*
 use_cases/merged_*
 use_cases/result_figures/*
+use_cases/results_original_setup.csv
 # any personal scratch files or folders
 x_*
 ~$*

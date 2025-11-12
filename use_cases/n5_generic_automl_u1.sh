@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name="n5_automl_u1"
-#SBATCH -A es_bokulich
+#SBATCH -A SLURM_SHARE
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=100
 #SBATCH --time=119:59:59
@@ -23,8 +23,6 @@ python ../src/generic_automl.py \
     --target age_months \
     --single-best \
     --restricted-model mlp
-
-# "ard_regression", "random_forest", "gradient_boosting", "mlp",
 
 # get elapsed time of job
 sstat -j $SLURM_JOB_ID
