@@ -6,11 +6,11 @@
 set -euo pipefail
 
 scripts=(
-  n2_model_metacardis_log_linreg_tpe.sh
-  n2_model_metacardis_log_nnreg_tpe.sh
-  n2_model_metacardis_log_rf_tpe.sh
-  n2_model_metacardis_log_xgb_tpe.sh
-  n2_model_metacardis_log_xgb_tpe_w_start.sh
+  n2_model_galaxy_log_linreg_tpe.sh
+  n2_model_galaxy_log_nnreg_tpe.sh
+  n2_model_galaxy_log_rf_tpe.sh
+  n2_model_galaxy_log_xgb_tpe.sh
+  # n2_model_galaxy_log_xgb_tpe_w_start.sh
 )
 
 for s in "${scripts[@]}"; do

@@ -1,11 +1,11 @@
 {
-  "experiment_tag": "u1_nnclass_tpe",
+  "experiment_tag": "u1_xgb_tpe_restricted",
   "fully_reproducible": false,
   "group_by_column": "host_id",
   "ls_model_types": [
-    "nn_class"
+    "xgb"
   ],
-  "max_cuncurrent_trials": 10,
+  "max_cuncurrent_trials": 80,
   "time_budget_s": 428400,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
@@ -13,11 +13,17 @@
   "target": "age_months",
   "tracking_uri": "mlruns",
   "model_hyperparameters": {
-    "data_enrich_with": [
-      "health_status_at_sampling",
-      "diet_milk",
-      "diet_weaning",
-      "abx_7d_prior"
+      "data_aggregation_options": [
+      "tax_order"
+    ],
+    "data_enrich_options": [
+      null
+    ],
+    "data_selection_options": [
+      null
+    ],
+    "data_transform_options": [
+      null
     ]
   }
 }

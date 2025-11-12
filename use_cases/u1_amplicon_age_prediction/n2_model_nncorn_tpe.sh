@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name="u3_metacardis_log_xgb_random"
-#SBATCH -A es_bokulich
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=50
-#SBATCH --mem-per-cpu=4096
+#SBATCH --job-name="u1_nncorn_tpe"
+#SBATCH -A SLURM_SHARE
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=100
 #SBATCH --time=119:59:59
-#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final/logs/%x_out.txt"
+#SBATCH --mem-per-cpu=4096
+#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
@@ -18,19 +18,23 @@ echo "SLURM_GPUS: $SLURM_GPUS"
 
 # ! USER SETTINGS HERE
 # -> config file to use
-CONFIG="config/u3_metacardis_log_xgb_random.json"
+CONFIG="config/u1_nncorn_tpe.json"
 # -> path to the metadata file
-PATH_MD="../../data/u3_mlp_nishijima24/md_metacardis.tsv"
+PATH_MD="../../data/u1_subramanian14/md_subr14.tsv"
 # -> path to the feature table file
-PATH_FT="../../data/u3_mlp_nishijima24/metacardis_otu_table.tsv"
+PATH_FT="../../data/u1_subramanian14/otu_table_subr14_wq.qza"
 # -> path to taxonomy file
-PATH_TAX="../../data/u3_mlp_nishijima24/u3_taxonomy.qza"
+PATH_TAX="../../data/u1_subramanian14/taxonomy_subr14.qza"
+# -> path to phylogeny file
+PATH_PHYLO="../../data/u1_subramanian14/fasttree_tree_rooted_subr14.qza"
 # -> path to the .env file
 ENV_PATH="../../.env"
 # -> path to store model logs
-LOGS_DIR="/cluster/project/bokulich/adamova/ritme_usecase_runs_final"
+LOGS_DIR="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time"
 # -> path to data splits
-PATH_DATA_SPLITS="data_splits_u3_metacardis_log"
+PATH_DATA_SPLITS="data_splits_u1"
+# -> group columns for train-test split
+GROUP_BY_COLUMN="host_id"
 
 # if your number of threads are limited increase as needed
 ulimit -u 60000
@@ -40,17 +44,20 @@ ulimit -n 524288
 # # Load environment variables from .env
 export $(grep -v '^#' "$ENV_PATH" | xargs)
 
+# # Python API version
+# python u1_n2_model_rf.py
+
 # # CLI version
 if [[ -f "${PATH_DATA_SPLITS}/train_val.pkl" && -f "${PATH_DATA_SPLITS}/test.pkl" ]]; then
     echo "train_val.pkl and test.pkl already exist. Skipping split-train-test."
 else
     echo "Running split-train-test"
     mkdir -p "$PATH_DATA_SPLITS"
-    ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" --train-size 0.8 --seed 12
+    ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" --group-by-column "$GROUP_BY_COLUMN" --train-size 0.8 --seed 12
 fi
 
 echo "Running find-best-model-config"
-ritme find-best-model-config $CONFIG "${PATH_DATA_SPLITS}/train_val.pkl" --path-to-tax $PATH_TAX --path-store-model-logs $LOGS_DIR
+ritme find-best-model-config $CONFIG "${PATH_DATA_SPLITS}/train_val.pkl" --path-to-tax $PATH_TAX --path-to-tree-phylo $PATH_PHYLO --path-store-model-logs $LOGS_DIR
 
 echo "Running evaluate-tuned-models"
 # Read the value of "experiment_tag" from the config file

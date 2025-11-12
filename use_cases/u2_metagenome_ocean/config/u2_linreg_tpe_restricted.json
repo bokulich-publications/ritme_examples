@@ -1,9 +1,9 @@
 {
-  "experiment_tag": "u2_rf_tpe",
+  "experiment_tag": "u2_linreg_tpe_restricted",
   "fully_reproducible": false,
   "group_by_column": null,
   "ls_model_types": [
-    "rf"
+    "linreg"
   ],
   "max_cuncurrent_trials": 80,
   "time_budget_s": 428400,
@@ -13,11 +13,17 @@
   "target": "temperature_mean_degc",
   "tracking_uri": "mlruns",
   "model_hyperparameters": {
-    "data_enrich_with": [
-      "sampling_depth_m",
-      "env_feature",
-      "latitude",
-      "longitude"
+      "data_aggregation_options": [
+      null
+    ],
+    "data_enrich_options": [
+      null
+    ],
+    "data_selection_options": [
+      "abundance_topi"
+    ],
+    "data_transform_options": [
+      "rank"
     ]
   }
 }

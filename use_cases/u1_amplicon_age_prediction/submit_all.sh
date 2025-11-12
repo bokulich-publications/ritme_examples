@@ -13,6 +13,7 @@ scripts=(
   n2_model_rf_tpe.sh
   n2_model_trac_tpe.sh
   n2_model_xgb_tpe.sh
+  # n2_model_xgb_tpe_restricted.sh
 )
 
 for s in "${scripts[@]}"; do
