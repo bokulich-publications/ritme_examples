@@ -1,5 +1,5 @@
 # ritme_examples
-This repos contains fully reproducible workflows to reproduce the use cases accompanying the ritme manuscript.
+This repos contains fully reproducible workflows to reproduce the use cases accompanying the [ritme manuscript](https://doi.org/10.64898/2025.12.08.693045).
 
 ## Setup
 Each use case has different dependencies - you can find the instructions to set up the necessary conda environments at the start of each notebook.
