@@ -6,6 +6,30 @@ plt.rcParams.update({"font.family": "DejaVu Sans"})
 plt.style.use("seaborn-v0_8-pastel")
 
 
+def load_baseline_split(splits_dir, ft_path, md_path, target):
+    """Reproduce the train/test sample split used by ritme for a baseline run.
+
+    Reads ritme's pickled splits in ``splits_dir`` to recover the sample ids,
+    then slices the original (un-prefixed) feature table and metadata by
+    those ids. Returns ``(X_train, y_train, X_test, y_test)``.
+
+    Use the original publication's feature table here — not the one consumed
+    by ritme — so the baseline reflects the original modelling pipeline.
+    """
+    train_idx = pd.read_pickle(f"{splits_dir}/train_val.pkl").index.tolist()
+    test_idx = pd.read_pickle(f"{splits_dir}/test.pkl").index.tolist()
+    ft = pd.read_csv(ft_path, sep="\t", index_col=0)
+    md = pd.read_csv(md_path, sep="\t", index_col=0)
+    predictor_cols = ft.columns
+    data = md.join(ft, how="inner")
+    return (
+        data.loc[train_idx, predictor_cols],
+        data.loc[train_idx, target],
+        data.loc[test_idx, predictor_cols],
+        data.loc[test_idx, target],
+    )
+
+
 def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
     model_type = "original"
     dic_data = {"train": [X_train, y_train], "test": [X_test, y_test]}
