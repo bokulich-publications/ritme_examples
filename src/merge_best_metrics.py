@@ -94,6 +94,18 @@ def merge_metrics(root: Path) -> pd.DataFrame:
         df["max_cuncurrent_trials"] = max_conc
         df["elapsed_time"] = elapsed_time
         df["launch_date"] = launch_date
+
+        # Optional bootstrap CIs written by `python -m src.bootstrap_metrics`
+        # (long-format CSV with one row per metric). Pivot to wide-format
+        # `<metric>_ci_low`/`<metric>_ci_high` columns next to the existing
+        # point estimates; missing experiments get NaN for these columns.
+        boot_file = exp_dir / "bootstrap_test_metrics.csv"
+        if boot_file.exists():
+            boot = pd.read_csv(boot_file)
+            for _, row in boot.iterrows():
+                df[f"{row['metric']}_ci_low"] = row["ci_low"]
+                df[f"{row['metric']}_ci_high"] = row["ci_high"]
+
         records.append(df)
 
     merged = pd.concat(records, axis=0).reset_index().rename(columns={"index": "model"})

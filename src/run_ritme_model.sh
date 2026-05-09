@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run a single ritme experiment end-to-end (optional QIIME2 conversion +
 # train/test split + find-best-model-config + evaluate-tuned-models +
-# explain-features for the best tuned model).
+# bootstrap test-set CIs + explain-features for the best tuned model).
 #
 # Driven entirely by env vars so the same script is used by every
 # (usecase, model_type) combination — see `src/launch_models.py`.
@@ -81,10 +81,19 @@ ritme evaluate-tuned-models "${LOGS_DIR}/${exp_tag}" \
   "${PATH_DATA_SPLITS}/train_val.pkl" \
   "${PATH_DATA_SPLITS}/test.pkl"
 
-# 5. Compute SHAP feature importance for the best tuned model.
 # `ls_model_types` is single-element by construction (`launch_models.py`
-# pins one model class per run); we read the first entry verbatim.
+# pins one model class per run); we read the first entry verbatim and
+# reuse it for both bootstrap and SHAP.
 model_type=$(python -c "import json,sys; print(json.load(open('$CONFIG'))['ls_model_types'][0])")
+
+# 5. Bootstrap 95% CIs on test-set RMSE/R²/Pearson for the tuned model.
+# Cheap (predict once + 1000 metric resamples) so it fits comfortably
+# in the SHAP buffer carved out of the SLURM walltime.
+echo "Running bootstrap-test-metrics (${model_type})"
+python -m src.bootstrap_metrics \
+  "${LOGS_DIR}/${exp_tag}" "$model_type" "${PATH_DATA_SPLITS}"
+
+# 6. Compute SHAP feature importance for the best tuned model.
 shap_args=()
 [[ -n "${SHAP_MAX_BACKGROUND_SAMPLES:-}" ]] && shap_args=(--max-background-samples "$SHAP_MAX_BACKGROUND_SAMPLES")
 echo "Running explain-features (${model_type})"
