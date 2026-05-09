@@ -20,23 +20,27 @@ from tqdm import tqdm
 
 def merge_metrics(root: Path) -> pd.DataFrame:
     """
-    Walk the immediate subdirectories of `root` (except `logs`), read each
-    `best_metrics.csv` (or produce a NaN row), read `experiment_config.json`
-    for num_trials/max_cuncurrent_trials and its creation date as launch_date,
-    parse elapsed_time from logs/<exp>_out.txt (with utf-8 replace) looking for
-    a D-HH:MM:SS timestamp, "DUE TO TIME LIMIT" or "CANCELLED AT" in the last 5
-    lines, and return a DataFrame with columns [
+    Recursively discover experiment directories under `root` (any folder
+    containing an `experiment_config.json`), read each `best_metrics.csv`
+    (or produce a NaN row), read `experiment_config.json` for
+    num_trials/max_cuncurrent_trials and its creation date as launch_date,
+    parse elapsed_time from a sibling `logs/<exp>_out.txt` (resolved as
+    `exp_dir.parent / "logs" / "<exp>_out.txt"`, with utf-8 replace) looking
+    for a D-HH:MM:SS timestamp, "DUE TO TIME LIMIT" or "CANCELLED AT" in the
+    last 5 lines, and return a DataFrame with columns [
       experiment, model, num_trials, max_cuncurrent_trials, <metrics…>,
       elapsed_time, launch_date
     ]. elapsed_time is HH:MM:SS, "error_time_limit", "cancelled" or "error";
-    launch_date is YYYY-MM-DD or "error".
+    launch_date is YYYY-MM-DD or "error". Recursive discovery handles both
+    flat layouts (experiments directly under root) and nested layouts (e.g.
+    `root/<run_set>/<experiment>/`).
     """
     if not root.is_dir():
         raise FileNotFoundError(f"Input path is not a directory: {root}")
 
-    exp_dirs = [d for d in sorted(root.iterdir()) if d.is_dir() and d.name != "logs"]
+    exp_dirs = sorted({p.parent for p in root.rglob("experiment_config.json")})
     if not exp_dirs:
-        raise FileNotFoundError(f"No subdirectories found under: {root}")
+        raise FileNotFoundError(f"No experiment_config.json files found under: {root}")
 
     records: List[pd.DataFrame] = []
     for exp_dir in tqdm(exp_dirs, desc="Experiments", file=sys.stdout):
@@ -62,7 +66,7 @@ def merge_metrics(root: Path) -> pd.DataFrame:
             num_trials, max_conc = pd.NA, pd.NA
             launch_date = "error"
 
-        log_file = root / "logs" / f"{exp_dir.name}_out.txt"
+        log_file = exp_dir.parent / "logs" / f"{exp_dir.name}_out.txt"
         if log_file.exists():
             text = log_file.read_text(encoding="utf-8", errors="replace")
             lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -118,7 +122,8 @@ def merge_metrics(root: Path) -> pd.DataFrame:
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Merge best_metrics.csv + configs and logs; optionally append an extra CSV."
+        description="Merge best_metrics.csv + configs and logs; optionally "
+        "append an extra CSV."
     )
     parser.add_argument(
         "-i",

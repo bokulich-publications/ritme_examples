@@ -190,6 +190,8 @@ use_cases/merged_*
 use_cases/result_figures/*
 use_cases/results_original_setup.csv
 use_cases/extract_all_logs_v128_project.sh
+use_cases/ritme_runs/*
+use_cases/archive_result_figures_ritmev128/*
 # any personal scratch files or folders
 x_*
 ~$*

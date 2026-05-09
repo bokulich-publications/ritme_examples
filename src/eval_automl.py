@@ -1,5 +1,6 @@
 # script needed since sklearn is way older in autosklearn conda env than ritme
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.transforms import offset_copy
@@ -82,8 +83,8 @@ def _calculate_metrics(all_preds: pd.DataFrame, model_type: str) -> pd.DataFrame
     for split in ["train", "test"]:
         pred_split = all_preds[all_preds["split"] == split].copy()
 
-        metrics.loc[model_type, f"rmse_{split}"] = mean_squared_error(
-            pred_split["true"], pred_split["pred"], squared=False
+        metrics.loc[model_type, f"rmse_{split}"] = np.sqrt(
+            mean_squared_error(pred_split["true"], pred_split["pred"])
         )
         metrics.loc[model_type, f"r2_{split}"] = r2_score(
             pred_split["true"], pred_split["pred"]

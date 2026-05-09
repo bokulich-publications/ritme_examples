@@ -1,20 +1,18 @@
 {
-  "experiment_tag": "u3_galaxy_log_rf_tpe",
   "fully_reproducible": false,
   "group_by_column": null,
-  "ls_model_types": [
-    "rf"
-  ],
-  "max_cuncurrent_trials": 80,
   "model_hyperparameters": {
     "data_enrich_with": [
-      "cohort"
+      "sampling_depth_m",
+      "env_feature",
+      "latitude",
+      "longitude"
     ]
   },
-  "time_budget_s": 428400,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
-  "target": "count_log10",
+  "target": "temperature_mean_degc",
+  "time_budget_s": 428400,
   "tracking_uri": "mlruns"
 }

@@ -3,11 +3,10 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from xgboost import XGBRegressor
 
-from src.eval_originals import get_metrics_n_scatterplot
+from src.eval_originals import get_metrics_n_scatterplot, load_baseline_split
 from src.process_u3 import preprocess_data_for_model
 
 plt.rcParams.update({"font.family": "DejaVu Sans"})
@@ -30,26 +29,13 @@ def main(cohort: str, target: str, use_shannon: bool = True):
     path_to_features = f"../../data/u3_mlp_nishijima24/{cohort}_otu_table.tsv"
     path_to_md = f"../../data/u3_mlp_nishijima24/md_{cohort}.tsv"
 
-    # load train/test indices
-    ritme_train_df = pd.read_pickle(f"{data_splits_folder}/train_val.pkl")
-    ritme_test_df = pd.read_pickle(f"{data_splits_folder}/test.pkl")
-    train_idx = ritme_train_df.index.tolist()
-    test_idx = ritme_test_df.index.tolist()
-
-    # read data
-    otu_df = pd.read_csv(path_to_features, sep="\t", index_col=0)
-    md_df = pd.read_csv(path_to_md, sep="\t", index_col=0)
-
+    X_train, y_train, X_test, y_test = load_baseline_split(
+        data_splits_folder, path_to_features, path_to_md, target
+    )
     if use_shannon:
-        # add shannon diversity to otu_df
-        otu_df["shannon"] = shannon_diversity(otu_df)
-
-    # split train-test
-    X_train = otu_df.loc[train_idx]
-    y_train = md_df.loc[train_idx, target]
-
-    X_test = otu_df.loc[test_idx]
-    y_test = md_df.loc[test_idx, target]
+        # add shannon diversity to features (computed per split to avoid leakage)
+        X_train = X_train.assign(shannon=shannon_diversity(X_train))
+        X_test = X_test.assign(shannon=shannon_diversity(X_test))
 
     # preprocess (filter, log, scale)
     X_train_scaled, feature_names, train_scaler = preprocess_data_for_model(X_train)

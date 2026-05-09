@@ -1,20 +1,18 @@
 {
-  "experiment_tag": "u3_galaxy_log_xgb_tpe",
   "fully_reproducible": false,
-  "group_by_column": null,
-  "ls_model_types": [
-    "xgb"
-  ],
-  "max_cuncurrent_trials": 80,
+  "group_by_column": "host_id",
   "model_hyperparameters": {
     "data_enrich_with": [
-      "cohort"
+      "health_status_at_sampling",
+      "diet_milk",
+      "diet_weaning",
+      "abx_7d_prior"
     ]
   },
-  "time_budget_s": 428400,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
-  "target": "count_log10",
+  "target": "age_months",
+  "time_budget_s": 428400,
   "tracking_uri": "mlruns"
 }
