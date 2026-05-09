@@ -286,6 +286,7 @@ def submit_model(
                 "PATH_PHYLO",
                 "GROUP_BY_COLUMN",
                 "QZA_INPUTS",
+                "SHAP_MAX_BACKGROUND_SAMPLES",
             }
         )
     )

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run a single ritme experiment end-to-end (optional QIIME2 conversion +
-# train/test split + find-best-model-config + evaluate-tuned-models).
+# train/test split + find-best-model-config + evaluate-tuned-models +
+# explain-features for the best tuned model).
 #
 # Driven entirely by env vars so the same script is used by every
 # (usecase, model_type) combination — see `src/launch_models.py`.
@@ -19,6 +20,11 @@
 #   QZA_INPUTS        Space-separated triples `kind:src.qza:dst.tsv|nwk` to
 #                     convert via `python -m src.convert_qiime2_artifacts`
 #                     before splitting. Idempotent (skips existing dst).
+#   SHAP_MAX_BACKGROUND_SAMPLES
+#                     Forwarded to `ritme explain-features
+#                     --max-background-samples`. Unset means use the full
+#                     training set (ritme's default). Useful for local
+#                     smoke tests where the full background can OOM.
 
 set -euo pipefail
 
@@ -74,3 +80,15 @@ echo "Running evaluate-tuned-models"
 ritme evaluate-tuned-models "${LOGS_DIR}/${exp_tag}" \
   "${PATH_DATA_SPLITS}/train_val.pkl" \
   "${PATH_DATA_SPLITS}/test.pkl"
+
+# 5. Compute SHAP feature importance for the best tuned model.
+# `ls_model_types` is single-element by construction (`launch_models.py`
+# pins one model class per run); we read the first entry verbatim.
+model_type=$(python -c "import json,sys; print(json.load(open('$CONFIG'))['ls_model_types'][0])")
+shap_args=()
+[[ -n "${SHAP_MAX_BACKGROUND_SAMPLES:-}" ]] && shap_args=(--max-background-samples "$SHAP_MAX_BACKGROUND_SAMPLES")
+echo "Running explain-features (${model_type})"
+ritme explain-features "${LOGS_DIR}/${exp_tag}" "$model_type" \
+  "${PATH_DATA_SPLITS}/train_val.pkl" \
+  "${PATH_DATA_SPLITS}/test.pkl" \
+  "${shap_args[@]}"
