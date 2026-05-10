@@ -63,6 +63,7 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
+        "slurm_overrides": {},
     },
     "u2": {
         "config_prefix": "u2",
@@ -86,8 +87,9 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
-        # u2 has the widest feature space (~36k features); trac and the NN
-        # input layer benefit from extra headroom per CPU.
+        # u2 has the widest feature space (~36k features); trac's matrix A
+        # and the NN input layer scale with feature count, so both benefit
+        # from extra headroom per CPU.
         "slurm_overrides": {
             "trac": {"mem_per_cpu_mb": 6144},
             "nn_reg": {"mem_per_cpu_mb": 6144},
@@ -114,8 +116,9 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
-        # u3 has the smallest feature space (~2k) and tighter per-trial
-        # memory; everything halves vs the wider u1/u2 datasets.
+        # u3 has the smallest feature space (~2k), so per-trial memory
+        # budgets tighten vs the wider u1/u2 datasets — roughly 40-75% of
+        # the MODEL_RESOURCES defaults, depending on model class.
         "slurm_overrides": {
             "linreg": {"mem_per_cpu_mb": 2048},
             "rf": {"mem_per_cpu_mb": 3072},
@@ -262,7 +265,9 @@ def submit_model(
         to the repo root if not absolute.
     mode : "slurm" submits via sbatch; "local" runs the template inline.
     sbatch_extra : extra sbatch flags inserted right after `sbatch`.
-    cpus, mem_per_cpu_mb : override the per-model SLURM defaults.
+    cpus, mem_per_cpu_mb : override the per-model SLURM defaults. When not
+        set, the resolved budget is MODEL_RESOURCES[model_type] overlaid
+        with USECASES[usecase]["slurm_overrides"].get(model_type, {}).
     """
     logs_path = Path(logs_dir)
     if not logs_path.is_absolute():
@@ -287,7 +292,7 @@ def submit_model(
         raise ValueError(f"Unknown mode: {mode!r}")
 
     res = dict(MODEL_RESOURCES.get(model_type, {"cpus": 30, "mem_per_cpu_mb": 4096}))
-    res.update(USECASES.get(usecase, {}).get("slurm_overrides", {}).get(model_type, {}))
+    res.update(USECASES[usecase].get("slurm_overrides", {}).get(model_type, {}))
     cpus = cpus or res["cpus"]
     mem_per_cpu_mb = mem_per_cpu_mb or res["mem_per_cpu_mb"]
     job_name = config_path.stem
