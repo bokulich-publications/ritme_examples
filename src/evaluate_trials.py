@@ -52,6 +52,85 @@ def _rolling_mean(s: pd.Series, window: int) -> pd.Series:
     return s.rolling(window=window, center=True, min_periods=1).mean()
 
 
+def _per_search_rolling_mean(
+    d: pd.DataFrame, y_col: str, tag_col: str | None, window: int
+) -> pd.Series:
+    """Rolling mean restricted to within each search (``tag_col`` group).
+
+    When trials from independent searches are concatenated, a global rolling
+    mean smears their distinct trajectories together. Computing the rolling
+    mean per group keeps each search's trend line honest, and inserting NaN
+    sentinels at group boundaries makes ``ax.plot`` automatically break the
+    line so it doesn't draw a misleading bridge across searches.
+    """
+    if tag_col is None or tag_col not in d.columns:
+        return _rolling_mean(d[y_col], window)
+    smoothed = d.groupby(tag_col, sort=False, group_keys=False)[y_col].transform(
+        lambda s: s.rolling(window=window, center=True, min_periods=1).mean()
+    )
+    # Insert NaN between consecutive trials whose tag changed, so matplotlib
+    # breaks the line at each search boundary.
+    if d[tag_col].nunique() > 1:
+        tag_arr = d[tag_col].to_numpy()
+        boundary_mask = np.zeros(len(d), dtype=bool)
+        boundary_mask[1:] = tag_arr[1:] != tag_arr[:-1]
+        smoothed = smoothed.where(~boundary_mask, np.nan)
+    return smoothed
+
+
+def _annotate_search_boundaries(
+    ax: plt.Axes,
+    d: pd.DataFrame,
+    tag_col: str | None,
+    x_col: str,
+    *,
+    line_color: str = "0.55",
+    label_color: str = "0.35",
+    label_fontsize: float = 7.5,
+) -> None:
+    """Draw thin dashed dividers at search boundaries and label each segment.
+
+    Each segment of consecutive trials sharing the same ``tag_col`` value
+    gets one small annotation centered horizontally above its bars, near
+    the top of the axes. Boundaries get a light dashed vertical line so the
+    visual break in the trend is unambiguous.
+    """
+    if tag_col is None or tag_col not in d.columns or d[tag_col].nunique() <= 1:
+        return
+    tag_arr = d[tag_col].to_numpy()
+    x_arr = d[x_col].to_numpy()
+    # Find contiguous runs of identical tags.
+    starts = [0]
+    for i in range(1, len(tag_arr)):
+        if tag_arr[i] != tag_arr[i - 1]:
+            starts.append(i)
+    starts.append(len(tag_arr))
+    for run_start, run_end in zip(starts[:-1], starts[1:]):
+        # Vertical divider at the start of every segment except the first.
+        if run_start > 0:
+            x_div = (x_arr[run_start - 1] + x_arr[run_start]) / 2.0
+            ax.axvline(
+                x_div,
+                linestyle=(0, (3, 3)),
+                linewidth=0.8,
+                color=line_color,
+                alpha=0.7,
+                zorder=2.5,
+            )
+        # Centered tag label near the top of the axes for this segment.
+        x_mid = (x_arr[run_start] + x_arr[run_end - 1]) / 2.0
+        ax.annotate(
+            str(tag_arr[run_start]),
+            xy=(x_mid, 0.96),
+            xycoords=("data", "axes fraction"),
+            ha="center",
+            va="top",
+            fontsize=label_fontsize,
+            color=label_color,
+            alpha=0.85,
+        )
+
+
 def _make_right_panel_figure(figsize, dpi):
     fig = plt.figure(figsize=figsize, dpi=dpi)
     gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[1.0, 0.35], wspace=0.05)
@@ -396,50 +475,62 @@ def plot_trend_over_time_multi_models(
     y_col: str,
     group_col: str = "params.model",
     time_col: str = "start_time",
+    tag_col: str = "tags.experiment_tag",
     models: list | None = None,
     window: int = 20,
     title_prefix: str = "Model: ",
     figsize: tuple | None = None,
-    raw_color: str = "gray",
-    raw_alpha: float = 0.4,
-    trend_color: str = "C0",
+    raw_alpha: float = 0.35,
+    trend_palette: str = "colorblind",
     std_alpha: float = 0.15,
     font_scale: float | None = None,
     dpi: int | None = None,
     first_n: int | None = None,
     y_log_scale: bool = False,
 ):
-    """Plot rolling-mean trends over time for multiple models in stacked subplots."""
+    """Plot rolling-mean trends over time for multiple models in stacked subplots.
+
+    Each model panel overlays one rolling-mean curve per ``tag_col`` value
+    (defaulting to ``tags.experiment_tag``), so independent search runs of
+    the same model are drawn as separate lines aligned at trial 0 of their
+    own search. Without this split, concatenating two TPE searches via
+    global wall-clock time would produce a misleading
+    "convergence-then-regression" artifact at the experiment boundary —
+    each fresh search restarts the sampler's exploration phase. If
+    ``tag_col`` is missing from ``df`` (or contains a single value) the
+    panel collapses to one curve, matching the prior behaviour.
+    """
     required_cols = {group_col, y_col, time_col}
     _require_columns(df, required_cols, "plot_trend_over_time_multi_models")
+    has_tag = tag_col in df.columns
 
     _set_seaborn_context(font_scale)
 
-    # Determine models to plot
     if models is None:
         models = list(pd.unique(df[group_col]))
     models = [m for m in models if pd.notna(m)]
 
-    # Prepare per-model series and track max length for shared x-axis
-    series = []
-    max_len = 0
+    # Build per-(model, tag) time-sorted series with trial_index local to
+    # each search. `per_model[model]` is a list of (tag, d) pairs.
+    cols_to_keep = [y_col, time_col] + ([tag_col] if has_tag else [])
+    per_model: dict = {}
     for model in models:
-        d = _parse_time_and_sort(
-            df[df[group_col] == model][[y_col, time_col]], time_col
-        )
-        if first_n is not None and first_n > 0:
-            d = d.head(first_n)
-        d = d[[y_col]].copy()
+        sub = df[df[group_col] == model][cols_to_keep]
+        tags = list(pd.unique(sub[tag_col].dropna())) if has_tag else ["all"]
+        groups = []
+        for tag in tags:
+            tdf = sub[sub[tag_col] == tag] if has_tag else sub
+            d = _parse_time_and_sort(tdf[[y_col, time_col]], time_col)
+            if first_n is not None and first_n > 0:
+                d = d.head(first_n)
+            d = d[[y_col]].copy()
+            d["trial_index"] = range(1, len(d) + 1)
+            roll = d[y_col].rolling(window=window, center=True, min_periods=1)
+            d["smoothed"] = roll.mean()
+            d["smoothed_std"] = roll.std(ddof=0)
+            groups.append((tag, d))
+        per_model[model] = groups
 
-        d["trial_index"] = range(1, len(d) + 1)
-        roll = d[y_col].rolling(window=window, center=True, min_periods=1)
-        d["smoothed"] = roll.mean()
-        d["smoothed_std"] = roll.std(ddof=0)
-        max_len = max(max_len, len(d))
-        series.append((model, d))
-
-    # Figure size defaults: scale height by number of models (ensure a minimum
-    # per-row height of ~4 inches)
     if figsize is None:
         figsize = (GLOBAL_FIGSIZE[0], GLOBAL_FIGSIZE[1] * len(models))
 
@@ -453,78 +544,57 @@ def plot_trend_over_time_multi_models(
     if len(models) == 1:
         axes = [axes]
 
-    # Human-friendly y-label mapping like plot_trend_over_time
-    if y_col == "metrics.rmse_val":
-        y_label = "RMSE Validation"
-    else:
-        y_label = y_col
+    y_label = "RMSE Validation" if y_col == "metrics.rmse_val" else y_col
 
-    for ax, (model, d) in zip(axes, series):
-        ax.scatter(
-            d["trial_index"],
-            d[y_col],
-            color=raw_color,
-            alpha=raw_alpha,
-            s=12,
-            label="Raw",
-        )
-        ax.plot(
-            d["trial_index"],
-            d["smoothed"],
-            color=trend_color,
-            linewidth=2,
-            label=f"Rolling mean (w={window})",
-        )
-        # Shaded band for ±1 std around the rolling mean
-        if "smoothed_std" in d.columns:
+    for ax, model in zip(axes, models):
+        groups = per_model[model]
+        palette = sns.color_palette(trend_palette, n_colors=max(len(groups), 3))
+        any_nonpos = False
+        for color, (tag, d) in zip(palette, groups):
+            ax.scatter(
+                d["trial_index"],
+                d[y_col],
+                color=color,
+                alpha=raw_alpha,
+                s=10,
+            )
+            ax.plot(
+                d["trial_index"],
+                d["smoothed"],
+                color=color,
+                linewidth=2,
+                label=f"{tag} (n={len(d)})",
+            )
             lower = d["smoothed"] - d["smoothed_std"]
             upper = d["smoothed"] + d["smoothed_std"]
             ax.fill_between(
                 d["trial_index"],
                 lower,
                 upper,
-                color=trend_color,
+                color=color,
                 alpha=std_alpha,
                 linewidth=0,
-                label=("±1 std" if ax is axes[0] else None),
             )
+            if (
+                (d[y_col] <= 0).any()
+                or (d["smoothed"] <= 0).any()
+                or (d["smoothed_std"] <= 0).any()
+            ):
+                any_nonpos = True
+
         ax.set_title(f"{title_prefix}{model}")
         ax.grid(True)
-        # Y label on the last subplot only to reduce clutter
-        if ax is axes[-1]:
-            y_label_printed = y_label
-        else:
-            y_label_printed = ""
-        ax.set_ylabel(y_label_printed)
-        # Optional log scale per subplot if values are positive
-        if y_log_scale:
-            has_nonpos = (d[y_col] <= 0).any() or (d["smoothed"] <= 0).any()
-            if "smoothed_std" in d.columns:
-                has_nonpos = has_nonpos or (d["smoothed_std"] <= 0).any()
-            if has_nonpos:
-                # keep linear for this subplot
-                pass
-            else:
-                ax.set_yscale("log")
-                if y_label_printed != "":
-                    ax.set_ylabel(y_label_printed + " (log scale)")
+        ax.set_ylabel(y_label if ax is axes[-1] else "")
+        if y_log_scale and not any_nonpos:
+            ax.set_yscale("log")
+            if ax is axes[-1]:
+                ax.set_ylabel(y_label + " (log scale)")
+        if groups:
+            ax.legend(loc="best", fontsize="x-small")
 
-    # X-labels (not shared): label only the last subplot to reduce clutter
     for ax in axes:
-        if ax is axes[-1]:
-            ax.set_xlabel("Trial number")
-        else:
-            ax.set_xlabel("")
-    # Common legend: use the last axis to collect handles
-    handles, labels = axes[-1].get_legend_handles_labels()
-    if handles:
-        fig.legend(
-            handles,
-            labels,
-            loc="lower center",
-            ncol=2,
-            bbox_to_anchor=(0.5, -0.02),
-        )
+        ax.set_xlabel("Trial within search" if ax is axes[-1] else "")
+
     fig.tight_layout()
     plt.show()
     return fig, axes
@@ -735,6 +805,7 @@ def plot_recent_param_cat_over_time(
     y_col: str = "metrics.rmse_val",
     group_col: str = "params.data_selection",
     time_col: str = "start_time",
+    tag_col: str | None = "tags.experiment_tag",
     n_last: int = 200,
     title: str | None = None,
     figsize: tuple | None = None,
@@ -743,14 +814,24 @@ def plot_recent_param_cat_over_time(
     y_log_scale: bool = False,
     window: int = 20,
 ):
-    """Bar chart of the last N trials colored by a group column with a trend line."""
-    # Validate required columns
+    """Bar chart of the last N trials colored by a group column with a trend line.
+
+    When ``tag_col`` is present and the last N trials span more than one
+    search, the rolling-mean trend is computed per-search and breaks at
+    search boundaries, with a thin dashed divider and small label per
+    segment. Without that split, two independent searches are smeared
+    together and the trend line invents a "convergence then regression"
+    artifact at the boundary.
+    """
+    cols = [y_col, group_col, time_col]
+    if tag_col and tag_col in df.columns:
+        cols.append(tag_col)
     _require_columns(
         df, {y_col, group_col, time_col}, "plot_recent_param_cat_over_time"
     )
 
     # Work on a copy; parse time and sort
-    d = _parse_time_and_sort(df[[y_col, group_col, time_col]], time_col)
+    d = _parse_time_and_sort(df[cols], time_col)
     d = d.dropna(subset=[time_col])
 
     # Keep last N trials, drop rows without metric
@@ -781,10 +862,10 @@ def plot_recent_param_cat_over_time(
         dpi=dpi or GLOBAL_DPI,
     )
 
-    # Bars and trend line
+    # Bars and per-search trend line (NaN gap at search boundaries)
     positions = list(d["trial_index"].values)
     ax.bar(positions, d[y_col], color=bar_colors, width=0.9, edgecolor="none")
-    d["smoothed"] = _rolling_mean(d[y_col], window)
+    d["smoothed"] = _per_search_rolling_mean(d, y_col, tag_col, window)
     (trend_line,) = ax.plot(
         positions,
         d["smoothed"],
@@ -803,6 +884,9 @@ def plot_recent_param_cat_over_time(
     # Optional log scale on y
     if y_log_scale and not (d[y_col] <= 0).any():
         ax.set_yscale("log")
+
+    # Search-boundary dividers + per-segment tag labels
+    _annotate_search_boundaries(ax, d, tag_col, "trial_index")
 
     # Legend in right panel: trend + categories (ordered by color map keys)
     present_cats = set(pd.unique(d[group_col]))
@@ -831,6 +915,7 @@ def plot_recent_param_cont_over_time(
     param_col: str,
     group_col: str = "params.data_selection",
     time_col: str = "start_time",
+    tag_col: str | None = "tags.experiment_tag",
     n_last: int = 200,
     n_bins: int = 6,
     binning: str = "quantile",  # "quantile", "uniform", or "log-uniform"
@@ -845,12 +930,21 @@ def plot_recent_param_cont_over_time(
     show_colorbar: bool = False,
     colorbar_label: str | None = None,
 ):
-    """Bar chart of last N trials colored by binned ranges of a continuous parameter."""
+    """Bar chart of last N trials colored by binned ranges of a continuous parameter.
+
+    When ``tag_col`` is present and the last N trials span more than one
+    search, the rolling-mean trend is computed per-search and breaks at
+    search boundaries, with a thin dashed divider and small label per
+    segment — same fix as ``plot_recent_param_cat_over_time``.
+    """
     required = {param_col, y_col, time_col}
     _require_columns(df, required, "plot_recent_param_cont_over_time")
 
     # Work on a copy; parse time and sort chronologically
-    d = _parse_time_and_sort(df[[param_col, y_col, time_col]], time_col)
+    cols = [param_col, y_col, time_col]
+    if tag_col and tag_col in df.columns:
+        cols.append(tag_col)
+    d = _parse_time_and_sort(df[cols], time_col)
     if n_last is not None and n_last > 0:
         d = d.tail(n_last)
 
@@ -941,8 +1035,9 @@ def plot_recent_param_cont_over_time(
     bar_colors = d["param_bin_label"].map(label_to_color)
     ax.bar(positions, d[y_col], color=bar_colors, width=0.9, edgecolor="none")
 
-    # Rolling mean line over bar heights
-    d["smoothed"] = _rolling_mean(d[y_col], window)
+    # Rolling mean line over bar heights (per-search, with NaN gaps at
+    # boundaries so independent searches don't share a smoothed trend).
+    d["smoothed"] = _per_search_rolling_mean(d, y_col, tag_col, window)
     (trend_line,) = ax.plot(
         positions,
         d["smoothed"],
@@ -961,6 +1056,9 @@ def plot_recent_param_cont_over_time(
     # Optional log scale with safety check
     if y_log_scale and not (d[y_col] <= 0).any():
         ax.set_yscale("log")
+
+    # Search-boundary dividers + per-segment tag labels
+    _annotate_search_boundaries(ax, d, tag_col, "x_pos")
 
     # Legend in the fixed right panel: parameter bin patches ordered low->high
     # plus the rolling-mean trend line. Include empty bins as well so users

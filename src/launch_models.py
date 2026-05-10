@@ -138,12 +138,19 @@ def _resolve_config_for_run(
     merged with model-class defaults (`MODEL_RESOURCES`) and any per-usecase
     `model_overrides`; the resolved config is materialized into
     `<logs_dir>/_resolved_configs/` for inspection.
+
+    Synthetic variant ``"no_enrich"`` derives from the base config the same
+    way the no-variant path does, then strips
+    ``model_hyperparameters.data_enrich_with`` so ritme runs without
+    metadata enrichment. The experiment_tag gains a ``_no_enrich`` suffix
+    so its outputs land in their own directory and are tracked separately
+    from the enriched runs.
     """
     spec = USECASES[usecase]
     config_dir = REPO_ROOT / spec["use_case_dir"] / "config"
     prefix = spec["config_prefix"]
 
-    if variant:
+    if variant and variant != "no_enrich":
         path = config_dir / f"{prefix}_{model_type}_{sampler}_{variant}.json"
         if not path.exists():
             raise FileNotFoundError(f"Variant config not found: {path}")
@@ -155,12 +162,19 @@ def _resolve_config_for_run(
         if not base_path.exists():
             raise FileNotFoundError(f"Base config not found: {base_path}")
         cfg = json.loads(base_path.read_text())
-        cfg["experiment_tag"] = f"{prefix}_{model_type}_{sampler}"
+        tag_suffix = f"_{variant}" if variant else ""
+        cfg["experiment_tag"] = f"{prefix}_{model_type}_{sampler}{tag_suffix}"
         cfg["ls_model_types"] = [model_type]
         res = MODEL_RESOURCES.get(model_type, {})
         if "max_cuncurrent_trials" in res:
             cfg["max_cuncurrent_trials"] = res["max_cuncurrent_trials"]
         cfg.update(spec.get("model_overrides", {}).get(model_type, {}))
+        if variant == "no_enrich":
+            mh = cfg.get("model_hyperparameters")
+            if isinstance(mh, dict):
+                mh.pop("data_enrich_with", None)
+                if not mh:
+                    cfg.pop("model_hyperparameters")
 
     if config_overrides:
         cfg.update(config_overrides)
@@ -217,7 +231,11 @@ def submit_model(
         "nn_reg", "nn_class", "nn_corn").
     sampler : Optuna sampler tag baked into the config filename (default "tpe").
     variant : optional variant suffix (e.g., "restricted", "w_start"); if set,
-        the launcher uses the corresponding standalone config file.
+        the launcher uses the corresponding standalone config file. The
+        synthetic ``"no_enrich"`` variant derives from the base config and
+        strips ``model_hyperparameters.data_enrich_with`` so the run uses
+        no metadata enrichment; outputs land under
+        ``<prefix>_<model>_<sampler>_no_enrich``.
     logs_dir : parent directory for the experiment output; resolved relative
         to the repo root if not absolute.
     mode : "slurm" submits via sbatch; "local" runs the template inline.
@@ -268,6 +286,7 @@ def submit_model(
                 "PATH_PHYLO",
                 "GROUP_BY_COLUMN",
                 "QZA_INPUTS",
+                "SHAP_MAX_BACKGROUND_SAMPLES",
             }
         )
     )

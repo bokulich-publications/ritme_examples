@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from xgboost import XGBRegressor
 
+from src.bootstrap_metrics import bootstrap_metrics
 from src.eval_originals import get_metrics_n_scatterplot, load_baseline_split
 from src.process_u3 import preprocess_data_for_model
 
@@ -80,6 +81,12 @@ def main(cohort: str, target: str, use_shannon: bool = True):
     metrics.to_csv(out_file, index=False)
     print(f"Metrics written to {out_file}")
     print(f"Metrics: {metrics}")
+
+    boot = bootstrap_metrics(y_test.to_numpy(), model.predict(X_test_scaled))
+    boot_file = os.path.join(path_to_save_results, "bootstrap_test_metrics.csv")
+    boot.to_csv(boot_file, index=False)
+    print(f"Bootstrap test-metric CIs written to {boot_file}")
+    print(boot.to_string(index=False))
 
     path_to_save = os.path.join(path_to_save_results, "best_true_vs_pred.png")
     fig.savefig(path_to_save, bbox_inches="tight")

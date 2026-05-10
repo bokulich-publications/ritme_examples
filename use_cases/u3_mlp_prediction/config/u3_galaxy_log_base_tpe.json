@@ -10,6 +10,6 @@
   "seed_data": 12,
   "seed_model": 12,
   "target": "count_log10",
-  "time_budget_s": 428400,
+  "time_budget_s": 406800,
   "tracking_uri": "mlruns"
 }

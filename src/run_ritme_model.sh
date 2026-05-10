@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run a single ritme experiment end-to-end (optional QIIME2 conversion +
-# train/test split + find-best-model-config + evaluate-tuned-models).
+# train/test split + find-best-model-config + evaluate-tuned-models +
+# bootstrap test-set CIs + explain-features for the best tuned model).
 #
 # Driven entirely by env vars so the same script is used by every
 # (usecase, model_type) combination — see `src/launch_models.py`.
@@ -19,6 +20,11 @@
 #   QZA_INPUTS        Space-separated triples `kind:src.qza:dst.tsv|nwk` to
 #                     convert via `python -m src.convert_qiime2_artifacts`
 #                     before splitting. Idempotent (skips existing dst).
+#   SHAP_MAX_BACKGROUND_SAMPLES
+#                     Forwarded to `ritme explain-features
+#                     --max-background-samples`. Unset means use the full
+#                     training set (ritme's default). Useful for local
+#                     smoke tests where the full background can OOM.
 
 set -euo pipefail
 
@@ -74,3 +80,24 @@ echo "Running evaluate-tuned-models"
 ritme evaluate-tuned-models "${LOGS_DIR}/${exp_tag}" \
   "${PATH_DATA_SPLITS}/train_val.pkl" \
   "${PATH_DATA_SPLITS}/test.pkl"
+
+# `ls_model_types` is single-element by construction (`launch_models.py`
+# pins one model class per run); we read the first entry verbatim and
+# reuse it for both bootstrap and SHAP.
+model_type=$(python -c "import json,sys; print(json.load(open('$CONFIG'))['ls_model_types'][0])")
+
+# 5. Bootstrap 95% CIs on test-set RMSE/R²/Pearson for the tuned model.
+# Cheap (predict once + 1000 metric resamples) so it fits comfortably
+# in the SHAP buffer carved out of the SLURM walltime.
+echo "Running bootstrap-test-metrics (${model_type})"
+python -m src.bootstrap_metrics \
+  "${LOGS_DIR}/${exp_tag}" "$model_type" "${PATH_DATA_SPLITS}"
+
+# 6. Compute SHAP feature importance for the best tuned model.
+shap_args=()
+[[ -n "${SHAP_MAX_BACKGROUND_SAMPLES:-}" ]] && shap_args=(--max-background-samples "$SHAP_MAX_BACKGROUND_SAMPLES")
+echo "Running explain-features (${model_type})"
+ritme explain-features "${LOGS_DIR}/${exp_tag}" "$model_type" \
+  "${PATH_DATA_SPLITS}/train_val.pkl" \
+  "${PATH_DATA_SPLITS}/test.pkl" \
+  "${shap_args[@]}"

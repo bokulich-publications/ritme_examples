@@ -6,14 +6,8 @@
     "linreg"
   ],
   "max_cuncurrent_trials": 80,
-  "time_budget_s": 428400,
-  "optuna_searchspace_sampler": "TPESampler",
-  "seed_data": 12,
-  "seed_model": 12,
-  "target": "temperature_mean_degc",
-  "tracking_uri": "mlruns",
   "model_hyperparameters": {
-      "data_aggregation_options": [
+    "data_aggregation_options": [
       null
     ],
     "data_enrich_options": [
@@ -25,5 +19,11 @@
     "data_transform_options": [
       "rank"
     ]
-  }
+  },
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "temperature_mean_degc",
+  "time_budget_s": 406800,
+  "tracking_uri": "mlruns"
 }
