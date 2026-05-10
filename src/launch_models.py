@@ -30,9 +30,11 @@ TEMPLATE = REPO_ROOT / "src/run_ritme_model.sh"
 # Per-use-case data + config paths. Each entry's `qza_inputs` lists the
 # (kind, src_qza, dst_plain) triples that the template will convert before
 # running ritme; `feature-table`, `taxonomy` and `tree` are the supported
-# kinds (see src/convert_qiime2_artifacts.py). `model_overrides` lets a
-# use case override per-model defaults from MODEL_RESOURCES (e.g., u2's trac
-# was historically run with max_concurrent_trials=40 instead of the default 80).
+# kinds (see src/convert_qiime2_artifacts.py). `model_overrides` lets a use
+# case override per-model fields baked into the ritme JSON config (e.g., a
+# tighter max_cuncurrent_trials for one model class). `slurm_overrides` does
+# the same for SLURM resource fields (cpus / mem_per_cpu_mb), enabling
+# usecase-specific sbatch sizing without forking MODEL_RESOURCES.
 USECASES: dict[str, dict] = {
     "u1": {
         "config_prefix": "u1",
@@ -61,6 +63,7 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
+        "slurm_overrides": {},
     },
     "u2": {
         "config_prefix": "u2",
@@ -83,9 +86,16 @@ USECASES: dict[str, dict] = {
                 "data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.nwk",
             ),
         ],
-        # Tighter parallelism for trac on u2 — original cluster runs used
-        # 40 concurrent trials due to memory pressure.
-        "model_overrides": {"trac": {"max_cuncurrent_trials": 40}},
+        "model_overrides": {},
+        # u2 has the widest feature space (~36k features); trac's matrix A
+        # and the NN input layer scale with feature count, so both benefit
+        # from extra headroom per CPU.
+        "slurm_overrides": {
+            "trac": {"mem_per_cpu_mb": 6144},
+            "nn_reg": {"mem_per_cpu_mb": 6144},
+            "nn_class": {"mem_per_cpu_mb": 6144},
+            "nn_corn": {"mem_per_cpu_mb": 6144},
+        },
     },
     "u3": {
         # u3 configs are named "u3_galaxy_log_<...>.json" — keep that prefix
@@ -106,17 +116,32 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
+        # u3 has the smallest feature space (~2k), so per-trial memory
+        # budgets tighten vs the wider u1/u2 datasets — roughly 40-75% of
+        # the MODEL_RESOURCES defaults, depending on model class.
+        "slurm_overrides": {
+            "linreg": {"mem_per_cpu_mb": 2048},
+            "rf": {"mem_per_cpu_mb": 3072},
+            "xgb": {"mem_per_cpu_mb": 3072},
+            "trac": {"mem_per_cpu_mb": 2048},
+            "nn_reg": {"mem_per_cpu_mb": 3072},
+            "nn_class": {"mem_per_cpu_mb": 3072},
+            "nn_corn": {"mem_per_cpu_mb": 3072},
+        },
     },
 }
 
-# SLURM resource + parallelism defaults captured from the legacy per-model
-# n2 scripts and JSON configs. `max_cuncurrent_trials` keeps ritme's own
-# (mis-)spelling so the dict can be merged straight into the config.
+# SLURM resource + parallelism defaults per model class — sized for the
+# widest of the three datasets (u1/u2; ~18-36k features). Per-usecase
+# `slurm_overrides` (in USECASES) tighten these where the data is smaller.
+# `max_cuncurrent_trials` keeps ritme's own (mis-)spelling so the dict can be
+# merged straight into the config. trac drops 14848 -> 5120 MB/CPU because
+# v1.4.0 builds matrix A as a sparse CSC matrix (PR #110).
 MODEL_RESOURCES: dict[str, dict] = {
     "linreg": {"cpus": 30, "mem_per_cpu_mb": 3072, "max_cuncurrent_trials": 80},
     "rf": {"cpus": 40, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
-    "trac": {"cpus": 50, "mem_per_cpu_mb": 14848, "max_cuncurrent_trials": 80},
-    "xgb": {"cpus": 50, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
+    "trac": {"cpus": 50, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
+    "xgb": {"cpus": 50, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 80},
     "nn_reg": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_class": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_corn": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
@@ -218,6 +243,7 @@ def submit_model(
     mode: str = "slurm",
     sbatch_extra: Optional[Iterable[str]] = None,
     slurm_time: str = "119:59:59",
+    slurm_account: Optional[str] = None,
     cpus: Optional[int] = None,
     mem_per_cpu_mb: Optional[int] = None,
     config_overrides: Optional[dict] = None,
@@ -240,7 +266,12 @@ def submit_model(
         to the repo root if not absolute.
     mode : "slurm" submits via sbatch; "local" runs the template inline.
     sbatch_extra : extra sbatch flags inserted right after `sbatch`.
-    cpus, mem_per_cpu_mb : override the per-model SLURM defaults.
+    slurm_account : value passed to sbatch ``--account=...`` (a.k.a. SLURM
+        share). When ``None`` (default) the cluster's default account
+        applies.
+    cpus, mem_per_cpu_mb : override the per-model SLURM defaults. When not
+        set, the resolved budget is MODEL_RESOURCES[model_type] overlaid
+        with USECASES[usecase]["slurm_overrides"].get(model_type, {}).
     """
     logs_path = Path(logs_dir)
     if not logs_path.is_absolute():
@@ -264,7 +295,8 @@ def submit_model(
     if mode != "slurm":
         raise ValueError(f"Unknown mode: {mode!r}")
 
-    res = MODEL_RESOURCES.get(model_type, {"cpus": 30, "mem_per_cpu_mb": 4096})
+    res = dict(MODEL_RESOURCES.get(model_type, {"cpus": 30, "mem_per_cpu_mb": 4096}))
+    res.update(USECASES[usecase].get("slurm_overrides", {}).get(model_type, {}))
     cpus = cpus or res["cpus"]
     mem_per_cpu_mb = mem_per_cpu_mb or res["mem_per_cpu_mb"]
     job_name = config_path.stem
@@ -302,6 +334,8 @@ def submit_model(
         "--open-mode=append",
         f"--export=ALL,{forwarded}",
     ]
+    if slurm_account:
+        cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
         cmd[1:1] = list(sbatch_extra)
     cmd.append(str(TEMPLATE))
