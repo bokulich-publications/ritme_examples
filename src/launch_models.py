@@ -30,9 +30,11 @@ TEMPLATE = REPO_ROOT / "src/run_ritme_model.sh"
 # Per-use-case data + config paths. Each entry's `qza_inputs` lists the
 # (kind, src_qza, dst_plain) triples that the template will convert before
 # running ritme; `feature-table`, `taxonomy` and `tree` are the supported
-# kinds (see src/convert_qiime2_artifacts.py). `model_overrides` lets a
-# use case override per-model defaults from MODEL_RESOURCES (e.g., u2's trac
-# was historically run with max_concurrent_trials=40 instead of the default 80).
+# kinds (see src/convert_qiime2_artifacts.py). `model_overrides` lets a use
+# case override per-model fields baked into the ritme JSON config (e.g., a
+# tighter max_cuncurrent_trials for one model class). `slurm_overrides` does
+# the same for SLURM resource fields (cpus / mem_per_cpu_mb), enabling
+# usecase-specific sbatch sizing without forking MODEL_RESOURCES.
 USECASES: dict[str, dict] = {
     "u1": {
         "config_prefix": "u1",
@@ -83,9 +85,15 @@ USECASES: dict[str, dict] = {
                 "data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.nwk",
             ),
         ],
-        # Tighter parallelism for trac on u2 — original cluster runs used
-        # 40 concurrent trials due to memory pressure.
-        "model_overrides": {"trac": {"max_cuncurrent_trials": 40}},
+        "model_overrides": {},
+        # u2 has the widest feature space (~36k features); trac and the NN
+        # input layer benefit from extra headroom per CPU.
+        "slurm_overrides": {
+            "trac": {"mem_per_cpu_mb": 6144},
+            "nn_reg": {"mem_per_cpu_mb": 6144},
+            "nn_class": {"mem_per_cpu_mb": 6144},
+            "nn_corn": {"mem_per_cpu_mb": 6144},
+        },
     },
     "u3": {
         # u3 configs are named "u3_galaxy_log_<...>.json" — keep that prefix
@@ -106,17 +114,31 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
+        # u3 has the smallest feature space (~2k) and tighter per-trial
+        # memory; everything halves vs the wider u1/u2 datasets.
+        "slurm_overrides": {
+            "linreg": {"mem_per_cpu_mb": 2048},
+            "rf": {"mem_per_cpu_mb": 3072},
+            "xgb": {"mem_per_cpu_mb": 3072},
+            "trac": {"mem_per_cpu_mb": 2048},
+            "nn_reg": {"mem_per_cpu_mb": 3072},
+            "nn_class": {"mem_per_cpu_mb": 3072},
+            "nn_corn": {"mem_per_cpu_mb": 3072},
+        },
     },
 }
 
-# SLURM resource + parallelism defaults captured from the legacy per-model
-# n2 scripts and JSON configs. `max_cuncurrent_trials` keeps ritme's own
-# (mis-)spelling so the dict can be merged straight into the config.
+# SLURM resource + parallelism defaults per model class — sized for the
+# widest of the three datasets (u1/u2; ~18-36k features). Per-usecase
+# `slurm_overrides` (in USECASES) tighten these where the data is smaller.
+# `max_cuncurrent_trials` keeps ritme's own (mis-)spelling so the dict can be
+# merged straight into the config. trac drops 14848 -> 5120 MB/CPU because
+# v1.4.0 builds matrix A as a sparse CSC matrix (PR #110).
 MODEL_RESOURCES: dict[str, dict] = {
     "linreg": {"cpus": 30, "mem_per_cpu_mb": 3072, "max_cuncurrent_trials": 80},
     "rf": {"cpus": 40, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
-    "trac": {"cpus": 50, "mem_per_cpu_mb": 14848, "max_cuncurrent_trials": 80},
-    "xgb": {"cpus": 50, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
+    "trac": {"cpus": 50, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
+    "xgb": {"cpus": 50, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 80},
     "nn_reg": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_class": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_corn": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
@@ -264,7 +286,8 @@ def submit_model(
     if mode != "slurm":
         raise ValueError(f"Unknown mode: {mode!r}")
 
-    res = MODEL_RESOURCES.get(model_type, {"cpus": 30, "mem_per_cpu_mb": 4096})
+    res = dict(MODEL_RESOURCES.get(model_type, {"cpus": 30, "mem_per_cpu_mb": 4096}))
+    res.update(USECASES.get(usecase, {}).get("slurm_overrides", {}).get(model_type, {}))
     cpus = cpus or res["cpus"]
     mem_per_cpu_mb = mem_per_cpu_mb or res["mem_per_cpu_mb"]
     job_name = config_path.stem
