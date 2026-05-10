@@ -243,6 +243,7 @@ def submit_model(
     mode: str = "slurm",
     sbatch_extra: Optional[Iterable[str]] = None,
     slurm_time: str = "119:59:59",
+    slurm_account: Optional[str] = None,
     cpus: Optional[int] = None,
     mem_per_cpu_mb: Optional[int] = None,
     config_overrides: Optional[dict] = None,
@@ -265,6 +266,9 @@ def submit_model(
         to the repo root if not absolute.
     mode : "slurm" submits via sbatch; "local" runs the template inline.
     sbatch_extra : extra sbatch flags inserted right after `sbatch`.
+    slurm_account : value passed to sbatch ``--account=...`` (a.k.a. SLURM
+        share). When ``None`` (default) the cluster's default account
+        applies.
     cpus, mem_per_cpu_mb : override the per-model SLURM defaults. When not
         set, the resolved budget is MODEL_RESOURCES[model_type] overlaid
         with USECASES[usecase]["slurm_overrides"].get(model_type, {}).
@@ -330,6 +334,8 @@ def submit_model(
         "--open-mode=append",
         f"--export=ALL,{forwarded}",
     ]
+    if slurm_account:
+        cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
         cmd[1:1] = list(sbatch_extra)
     cmd.append(str(TEMPLATE))

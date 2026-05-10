@@ -66,6 +66,7 @@ def submit_automl(
     cpus: int = 100,
     mem_per_cpu_mb: int = 4096,
     slurm_time: str = "119:59:59",
+    slurm_account: Optional[str] = None,
 ) -> subprocess.CompletedProcess:
     """Submit (or run locally) the auto-sklearn baseline for a use case.
 
@@ -77,6 +78,8 @@ def submit_automl(
         "gradient_boosting", "mlp", "random_forest".
     logs_dir : parent dir for the auto-sklearn output and SLURM log.
     mode : "slurm" (default) submits via sbatch; "local" runs inline.
+    slurm_account : value for sbatch ``--account=...`` (a.k.a. SLURM share).
+        ``None`` (default) leaves it unset and uses the cluster default.
     """
     if usecase not in USECASES:
         raise KeyError(f"Unknown usecase: {usecase!r}")
@@ -134,6 +137,8 @@ def submit_automl(
         f"--chdir={REPO_ROOT}",
         f"--wrap={wrapped}",
     ]
+    if slurm_account:
+        sbatch_cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
         sbatch_cmd[1:1] = list(sbatch_extra)
     print("submitting:", " ".join(shlex.quote(c) for c in sbatch_cmd))
