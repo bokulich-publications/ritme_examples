@@ -1,6 +1,7 @@
 """
 Module to denoise sequences of each study
 """
+
 # todo: combine this with e_trim_sequences.py
 
 import argparse

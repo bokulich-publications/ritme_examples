@@ -1,6 +1,14 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from ritme.evaluate_tuned_models import _calculate_metrics, _plot_scatter_plots
+from sklearn.metrics import (
+    RocCurveDisplay,
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 plt.rcParams.update({"font.family": "DejaVu Sans"})
 plt.style.use("seaborn-v0_8-pastel")
@@ -57,4 +65,42 @@ def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
         only_one_model=True,
     )
 
+    return metrics, fig
+
+
+def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
+    """Classification analog of :func:`get_metrics_n_scatterplot`.
+
+    Computes AUROC, accuracy, F1, precision, recall on train and test sets,
+    and draws side-by-side train/test ROC curves. Returns
+    ``(metrics_df, fig)``.
+
+    Requires ``model`` to expose ``predict_proba`` (a scikit-learn-style
+    binary classifier with the positive class encoded as ``1``).
+    """
+    model_type = "original"
+    dic_data = {"train": (X_train, y_train), "test": (X_test, y_test)}
+
+    metrics = pd.DataFrame()
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5), dpi=400)
+
+    for ax, (split, (X, y)) in zip(axs, dic_data.items()):
+        y_proba = model.predict_proba(X)[:, 1]
+        y_pred = (y_proba >= 0.5).astype(int)
+        metrics.loc[model_type, f"auroc_{split}"] = roc_auc_score(y, y_proba)
+        metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y, y_pred)
+        metrics.loc[model_type, f"f1_{split}"] = f1_score(y, y_pred, zero_division=0)
+        metrics.loc[model_type, f"precision_{split}"] = precision_score(
+            y, y_pred, zero_division=0
+        )
+        metrics.loc[model_type, f"recall_{split}"] = recall_score(
+            y, y_pred, zero_division=0
+        )
+
+        RocCurveDisplay.from_predictions(y, y_proba, ax=ax, name=model_type)
+        ax.plot([0, 1], [0, 1], color="grey", linestyle="--", linewidth=1)
+        ax.set_title(f"{split} (n={len(y)})")
+        ax.set_aspect("equal")
+
+    fig.tight_layout()
     return metrics, fig

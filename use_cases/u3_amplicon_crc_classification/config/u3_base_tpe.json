@@ -1,0 +1,18 @@
+{
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "model_hyperparameters": {
+    "data_enrich_with": [
+      "age",
+      "gender",
+      "bmi",
+      "fit_result"
+    ]
+  },
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "target": "srn",
+  "time_budget_s": 406800,
+  "tracking_uri": "mlruns"
+}

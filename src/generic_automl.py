@@ -1,21 +1,36 @@
-"""automl implementation for usecase regression tasks"""
+"""automl implementation for usecase regression and binary-classification tasks."""
 
 import argparse
 import os
 from pprint import pprint
 
+import autosklearn.classification
 import autosklearn.regression
 import pandas as pd
 from autosklearn.ensembles import SingleBest
-from autosklearn.metrics import root_mean_squared_error
+from autosklearn.metrics import roc_auc, root_mean_squared_error
 
-from src.eval_automl import get_metrics_n_scatterplot
+from src.eval_automl import (
+    get_metrics_n_roc_curve,
+    get_metrics_n_scatterplot,
+)
+
+REGRESSION_MODELS = ["ard_regression", "gradient_boosting", "mlp", "random_forest"]
+CLASSIFICATION_MODELS = ["gradient_boosting", "mlp", "random_forest"]
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Run Auto-Sklearn regression")
+    p = argparse.ArgumentParser(
+        description="Run Auto-Sklearn regression or classification"
+    )
     p.add_argument("--total-time-s", type=int, required=True)
     p.add_argument("--usecase", required=True)
+    p.add_argument(
+        "--task",
+        required=True,
+        choices=["regression", "classification"],
+        help="Auto-Sklearn estimator family.",
+    )
     p.add_argument("--data-splits-folder", required=True)
     p.add_argument("--path-to-features", required=True)
     p.add_argument("--path-to-md", required=True)
@@ -25,13 +40,11 @@ def parse_args():
         dest="restricted_models",
         nargs="+",
         default=[],
-        choices=[
-            "ard_regression",
-            "gradient_boosting",
-            "mlp",
-            "random_forest",
-        ],
-        help="Space separated list of regressors to include.",
+        help=(
+            "Space-separated list of estimators to include. Names follow "
+            "auto-sklearn's regressor / classifier vocabulary (mlp, "
+            "random_forest, gradient_boosting are valid for both)."
+        ),
     )
     p.add_argument(
         "--single-best",
@@ -64,45 +77,39 @@ def main():
     X_test = otu_df.loc[test_idx]
     y_test = md_df.loc[test_idx, args.target]
 
-    # X, y = sklearn.datasets.load_diabetes(return_X_y=True)
-    # X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
-    #     X, y, random_state=1
-    # )
+    if args.task == "classification":
+        y_train = y_train.astype(int)
+        y_test = y_test.astype(int)
+        default_models = CLASSIFICATION_MODELS
+        metric = roc_auc
+        estimator_key = "classifier"
+        Estimator = autosklearn.classification.AutoSklearnClassifier
+    else:
+        default_models = REGRESSION_MODELS
+        metric = root_mean_squared_error
+        estimator_key = "regressor"
+        Estimator = autosklearn.regression.AutoSklearnRegressor
+
+    common_kwargs = dict(
+        time_left_for_this_task=args.total_time_s,
+        n_jobs=-1,
+        metric=metric,
+        memory_limit=24000,
+    )
     if args.single_best:
         print("No ensembles - only single best model.")
-        common_kwargs = dict(
-            time_left_for_this_task=args.total_time_s,
-            n_jobs=-1,
-            metric=root_mean_squared_error,
-            ensemble_class=SingleBest,
-            memory_limit=24000,
-        )
-    else:
-        common_kwargs = dict(
-            time_left_for_this_task=args.total_time_s,
-            n_jobs=-1,
-            metric=root_mean_squared_error,
-            memory_limit=24000,
-        )
+        common_kwargs["ensemble_class"] = SingleBest
 
-    if len(args.restricted_models) > 0:
-        print(f"Using only restricted models: {args.restricted_models}")
-        automl = autosklearn.regression.AutoSklearnRegressor(
-            include={"regressor": args.restricted_models},
-            **common_kwargs,
+    models = args.restricted_models or default_models
+    invalid = [m for m in args.restricted_models if m not in default_models]
+    if invalid:
+        # auto-sklearn raises a less-helpful error deeper inside fit(); flag early.
+        raise ValueError(
+            f"Restricted models {invalid} are not valid for task={args.task!r}. "
+            f"Valid options: {default_models}."
         )
-    else:
-        automl = autosklearn.regression.AutoSklearnRegressor(
-            include={
-                "regressor": [
-                    "ard_regression",
-                    "gradient_boosting",
-                    "mlp",
-                    "random_forest",
-                ]
-            },
-            **common_kwargs,
-        )
+    print(f"Using auto-sklearn {args.task} with models: {models}")
+    automl = Estimator(include={estimator_key: list(models)}, **common_kwargs)
 
     automl.fit(X_train, y_train)
     print("Print model leaderboard:")
@@ -112,7 +119,12 @@ def main():
     pprint(automl.show_models(), indent=4)
 
     # evaluate
-    metrics, fig = get_metrics_n_scatterplot(automl, X_train, y_train, X_test, y_test)
+    if args.task == "classification":
+        metrics, fig = get_metrics_n_roc_curve(automl, X_train, y_train, X_test, y_test)
+    else:
+        metrics, fig = get_metrics_n_scatterplot(
+            automl, X_train, y_train, X_test, y_test
+        )
 
     out_dir = "automl"
     os.makedirs(out_dir, exist_ok=True)
@@ -121,7 +133,8 @@ def main():
     metrics.reset_index(names="model", inplace=True)
     metrics.to_csv(metrics_path, index=False)
 
-    fig_path = os.path.join(out_dir, f"{args.usecase}_best_true_vs_pred.png")
+    fig_suffix = "roc" if args.task == "classification" else "true_vs_pred"
+    fig_path = os.path.join(out_dir, f"{args.usecase}_best_{fig_suffix}.png")
     fig.savefig(fig_path, bbox_inches="tight")
 
     print(f"Metrics written to {metrics_path}")
