@@ -5,7 +5,16 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.transforms import offset_copy
 from scipy.stats import pearsonr
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+)
 
 plt.rcParams.update({"font.family": "DejaVu Sans"})
 plt.style.use("seaborn-v0_8-pastel")
@@ -123,4 +132,52 @@ def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
         only_one_model=True,
     )
 
+    return metrics, fig
+
+
+def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
+    """Auto-sklearn classification analog of :func:`get_metrics_n_scatterplot`.
+
+    Mirrors `src.eval_originals.get_metrics_n_roc_curve` so the autoML and
+    original-baseline outputs share the same metric layout, but lives here
+    to keep `src/eval_automl.py` importable in the autosklearn env (whose
+    sklearn is far older than ritme's).
+    """
+    model_type = "automl"
+    dic_data = {"train": (X_train, y_train), "test": (X_test, y_test)}
+
+    metrics = pd.DataFrame()
+    fig, axs = plt.subplots(1, 2, figsize=(12, 5), dpi=400)
+    colors = {"train": "cornflowerblue", "test": "coral"}
+
+    for ax, (split, (X, y)) in zip(axs, dic_data.items()):
+        y_proba = model.predict_proba(X)[:, 1]
+        y_pred = (y_proba >= 0.5).astype(int)
+
+        metrics.loc[model_type, f"auroc_{split}"] = roc_auc_score(y, y_proba)
+        metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y, y_pred)
+        metrics.loc[model_type, f"f1_{split}"] = f1_score(y, y_pred, zero_division=0)
+        metrics.loc[model_type, f"precision_{split}"] = precision_score(
+            y, y_pred, zero_division=0
+        )
+        metrics.loc[model_type, f"recall_{split}"] = recall_score(
+            y, y_pred, zero_division=0
+        )
+
+        fpr, tpr, _ = roc_curve(y, y_proba)
+        auroc = metrics.loc[model_type, f"auroc_{split}"]
+        ax.plot(
+            fpr,
+            tpr,
+            color=colors[split],
+            label=f"{model_type} (AUROC = {auroc:.2f})",
+        )
+        ax.plot([0, 1], [0, 1], color="grey", linestyle="--", linewidth=1)
+        ax.set_xlabel("False positive rate")
+        ax.set_ylabel("True positive rate")
+        ax.set_title(f"{split.capitalize()} (n={len(y)})")
+        ax.set_aspect("equal")
+        ax.legend(loc="lower right")
+
+    fig.tight_layout()
     return metrics, fig

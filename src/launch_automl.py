@@ -72,10 +72,11 @@ def submit_automl(
 
     Parameters
     ----------
-    usecase : "u1" | "u2" | "u3"
+    usecase : "u1" | "u2" | "u3" | "u3_legacy"
     total_time_s : auto-sklearn time budget.
-    restricted_model : auto-sklearn regressor class — one of "ard_regression",
-        "gradient_boosting", "mlp", "random_forest".
+    restricted_model : auto-sklearn estimator name. ``mlp``, ``random_forest``
+        and ``gradient_boosting`` are valid for both regression and
+        classification tasks; ``ard_regression`` is regression-only.
     logs_dir : parent dir for the auto-sklearn output and SLURM log.
     mode : "slurm" (default) submits via sbatch; "local" runs inline.
     slurm_account : value for sbatch ``--account=...`` (a.k.a. SLURM share).
@@ -87,6 +88,7 @@ def submit_automl(
 
     spec = USECASES[usecase]
     target = _read_target(usecase)
+    task = spec["task"]
 
     logs_path = Path(logs_dir)
     if not logs_path.is_absolute():
@@ -101,6 +103,8 @@ def submit_automl(
         str(total_time_s),
         "--usecase",
         usecase,
+        "--task",
+        task,
         "--data-splits-folder",
         str(REPO_ROOT / spec["data_splits"]),
         "--path-to-features",
@@ -120,7 +124,7 @@ def submit_automl(
     if mode != "slurm":
         raise ValueError(f"Unknown mode: {mode!r}")
 
-    job_name = f"n5_automl_{usecase}_{restricted_model}"
+    job_name = f"n5_automl_{usecase}_{task}_{restricted_model}"
     out_log = logs_path / "logs" / f"{job_name}_out.txt"
     out_log.parent.mkdir(parents=True, exist_ok=True)
 

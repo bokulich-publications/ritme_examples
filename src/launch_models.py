@@ -45,6 +45,8 @@ USECASES: dict[str, dict] = {
         "path_tax": "data/u1_subramanian14/taxonomy_subr14.tsv",
         "path_phylo": "data/u1_subramanian14/fasttree_tree_rooted_subr14.nwk",
         "group_by_column": "host_id",
+        "stratify_by": None,
+        "task": "regression",
         "qza_inputs": [
             (
                 "feature-table",
@@ -74,6 +76,8 @@ USECASES: dict[str, dict] = {
         "path_tax": "data/u2_tara_ocean/taxonomy_tara_ocean.tsv",
         "path_phylo": "data/u2_tara_ocean/fasttree_tree_rooted_proc_suna15.nwk",
         "group_by_column": None,
+        "stratify_by": None,
+        "task": "regression",
         "qza_inputs": [
             (
                 "taxonomy",
@@ -98,7 +102,31 @@ USECASES: dict[str, dict] = {
         },
     },
     "u3": {
-        # u3 configs are named "u3_galaxy_log_<...>.json" — keep that prefix
+        # CRC classification (Topcuoğlu 2020 / Baxter 2016). Both feature
+        # tables ship pre-processed in the SchlossLab repos: ritme consumes
+        # the un-rarefied table, the original baseline consumes the
+        # subsampled one — mirrors the U1 pattern. `stratify_by="srn"`
+        # preserves the ~47% positive-class prevalence in both train and
+        # test (each patient is one sample, so no group split needed).
+        "config_prefix": "u3",
+        "use_case_dir": "use_cases/u3_amplicon_crc_classification",
+        "data_splits": "use_cases/u3_amplicon_crc_classification/data_splits_u3",
+        "path_md": "data/u3_topcuoglu20_baxter/md_baxter.tsv",
+        "path_ft": "data/u3_topcuoglu20_baxter/otu_table_baxter_unrarefied.tsv",
+        "path_tax": "data/u3_topcuoglu20_baxter/taxonomy_baxter.tsv",
+        "path_phylo": None,
+        "group_by_column": None,
+        "stratify_by": "srn",
+        "task": "classification",
+        "qza_inputs": [],
+        "model_overrides": {},
+        "slurm_overrides": {},
+    },
+    "u3_legacy": {
+        # Former U3 (microbial load / Nishijima 2024 / MLP regression).
+        # Parked under this key while U3 = CRC classification is evaluated;
+        # remove this entry once the new U3 is confirmed as the keeper.
+        # Configs are named "u3_galaxy_log_<...>.json" — keep that prefix
         # so the launcher can resolve them.
         "config_prefix": "u3_galaxy_log",
         "use_case_dir": "use_cases/u3_mlp_prediction",
@@ -108,6 +136,8 @@ USECASES: dict[str, dict] = {
         "path_tax": "data/u3_mlp_nishijima24/u3_taxonomy.tsv",
         "path_phylo": None,
         "group_by_column": None,
+        "stratify_by": None,
+        "task": "regression",
         "qza_inputs": [
             (
                 "taxonomy",
@@ -116,9 +146,9 @@ USECASES: dict[str, dict] = {
             ),
         ],
         "model_overrides": {},
-        # u3 has the smallest feature space (~2k), so per-trial memory
-        # budgets tighten vs the wider u1/u2 datasets — roughly 40-75% of
-        # the MODEL_RESOURCES defaults, depending on model class.
+        # Smallest feature space in the suite (~2k); per-trial memory budgets
+        # tighten vs the wider u1/u2 datasets — roughly 40-75% of the
+        # MODEL_RESOURCES defaults, depending on model class.
         "slurm_overrides": {
             "linreg": {"mem_per_cpu_mb": 2048},
             "rf": {"mem_per_cpu_mb": 3072},
@@ -132,7 +162,7 @@ USECASES: dict[str, dict] = {
 }
 
 # SLURM resource + parallelism defaults per model class — sized for the
-# widest of the three datasets (u1/u2; ~18-36k features). Per-usecase
+# widest datasets in the suite (u1/u2; ~18-36k features). Per-usecase
 # `slurm_overrides` (in USECASES) tighten these where the data is smaller.
 # `max_cuncurrent_trials` keeps ritme's own (mis-)spelling so the dict can be
 # merged straight into the config. trac drops 14848 -> 5120 MB/CPU because
@@ -145,6 +175,9 @@ MODEL_RESOURCES: dict[str, dict] = {
     "nn_reg": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_class": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
     "nn_corn": {"cpus": 100, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 10},
+    "logreg": {"cpus": 30, "mem_per_cpu_mb": 3072, "max_cuncurrent_trials": 80},
+    "rf_class": {"cpus": 40, "mem_per_cpu_mb": 5120, "max_cuncurrent_trials": 80},
+    "xgb_class": {"cpus": 50, "mem_per_cpu_mb": 4096, "max_cuncurrent_trials": 80},
 }
 
 
@@ -225,6 +258,8 @@ def _build_env(usecase: str, config_path: Path, logs_dir: Path) -> dict:
         env["PATH_PHYLO"] = str(REPO_ROOT / spec["path_phylo"])
     if spec["group_by_column"]:
         env["GROUP_BY_COLUMN"] = spec["group_by_column"]
+    if spec["stratify_by"]:
+        env["STRATIFY_BY_COLUMN"] = spec["stratify_by"]
     if spec["qza_inputs"]:
         env["QZA_INPUTS"] = " ".join(
             f"{kind}:{REPO_ROOT / src}:{REPO_ROOT / dst}"
@@ -252,9 +287,9 @@ def submit_model(
 
     Parameters
     ----------
-    usecase : "u1" | "u2" | "u3"
+    usecase : "u1" | "u2" | "u3" | "u3_legacy"
     model_type : ritme model class (e.g. "linreg", "xgb", "rf", "trac",
-        "nn_reg", "nn_class", "nn_corn").
+        "nn_reg", "nn_class", "nn_corn", "logreg", "rf_class", "xgb_class").
     sampler : Optuna sampler tag baked into the config filename (default "tpe").
     variant : optional variant suffix (e.g., "restricted", "w_start"); if set,
         the launcher uses the corresponding standalone config file. The
@@ -317,6 +352,7 @@ def submit_model(
                 "PATH_TAX",
                 "PATH_PHYLO",
                 "GROUP_BY_COLUMN",
+                "STRATIFY_BY_COLUMN",
                 "QZA_INPUTS",
                 "SHAP_MAX_BACKGROUND_SAMPLES",
             }

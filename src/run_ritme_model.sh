@@ -17,6 +17,9 @@
 #   PATH_TAX          Taxonomy TSV (forwarded to find-best-model-config).
 #   PATH_PHYLO        Phylogeny NWK (forwarded to find-best-model-config).
 #   GROUP_BY_COLUMN   Column for grouped train/test split.
+#   STRATIFY_BY_COLUMN  Column passed to `ritme split-train-test --stratify-by`
+#                     (comma-separated for multi-column stratification, e.g. a
+#                     binary classification target).
 #   QZA_INPUTS        Space-separated triples `kind:src.qza:dst.tsv|nwk` to
 #                     convert via `python -m src.convert_qiime2_artifacts`
 #                     before splitting. Idempotent (skips existing dst).
@@ -49,9 +52,12 @@ if [[ -n "${QZA_INPUTS:-}" ]]; then
   done
 fi
 
-# 2. Train/test split (idempotent).
+# 2. Train/test split (idempotent on path; does NOT detect config drift —
+# delete the splits dir if you change --group-by-column, --stratify-by,
+# --train-size, or --seed between runs).
 if [[ -f "${PATH_DATA_SPLITS}/train_val.pkl" && -f "${PATH_DATA_SPLITS}/test.pkl" ]]; then
   echo "Reusing existing splits in ${PATH_DATA_SPLITS}"
+  echo "  (current launch flags — group=${GROUP_BY_COLUMN:-none}, stratify=${STRATIFY_BY_COLUMN:-none}; verify these match the cached split)"
 else
   echo "Running split-train-test"
   mkdir -p "$PATH_DATA_SPLITS"
@@ -59,8 +65,12 @@ else
   if [[ -n "${GROUP_BY_COLUMN:-}" ]]; then
     group_args=(--group-by-column "$GROUP_BY_COLUMN")
   fi
+  stratify_args=()
+  if [[ -n "${STRATIFY_BY_COLUMN:-}" ]]; then
+    stratify_args=(--stratify-by "$STRATIFY_BY_COLUMN")
+  fi
   ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" \
-    "${group_args[@]}" --train-size 0.8 --seed 12
+    "${group_args[@]}" "${stratify_args[@]}" --train-size 0.8 --seed 12
 fi
 
 # 3. Find best model config.
@@ -86,9 +96,11 @@ ritme evaluate-tuned-models "${LOGS_DIR}/${exp_tag}" \
 # reuse it for both bootstrap and SHAP.
 model_type=$(python -c "import json,sys; print(json.load(open('$CONFIG'))['ls_model_types'][0])")
 
-# 5. Bootstrap 95% CIs on test-set RMSE/R²/Pearson for the tuned model.
-# Cheap (predict once + 1000 metric resamples) so it fits comfortably
-# in the SHAP buffer carved out of the SLURM walltime.
+# 5. Bootstrap 95% CIs on test-set metrics for the tuned model. The CLI
+# auto-dispatches by model_type: regression models yield RMSE/R²/Pearson,
+# classification models yield AUROC/accuracy/F1/precision/recall. Cheap
+# (predict once + 1000 metric resamples) so it fits comfortably in the
+# SHAP buffer carved out of the SLURM walltime.
 echo "Running bootstrap-test-metrics (${model_type})"
 python -m src.bootstrap_metrics \
   "${LOGS_DIR}/${exp_tag}" "$model_type" "${PATH_DATA_SPLITS}"

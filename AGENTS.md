@@ -6,11 +6,13 @@ Guidelines for AI coding agents working on this repository.
 
 ## Project overview
 
-This repos displays the power of **ritme** in three example usecases demonstrated in an accompanying mansucript. **ritme** is a Python package for finding the best microbial feature representation and model algorithm for a predictive regression task on next-generation sequencing data. Microbial features are engineered accounting for their statistical characteristics (compositionality, high dimensionality, hierarchical relationships, sparsity). **Ritme** lives in this open-source repos: https://github.com/adamovanja/ritme.
+This repos displays the power of **ritme** in three example usecases demonstrated in an accompanying mansucript. **ritme** is a Python package for finding the best microbial feature representation and model algorithm for a predictive task on next-generation sequencing data (regression or classification). Microbial features are engineered accounting for their statistical characteristics (compositionality, high dimensionality, hierarchical relationships, sparsity). **Ritme** lives in this open-source repos: https://github.com/adamovanja/ritme.
 
 ## The usecases
-This repos displays 3 use cases: u1_amplicon_age_prediction, u2_metagenome_ocean & u3_mlp_prediction. For each of these first the data is processed according to the original studies' pipeline in `n1_data.ipynb` (with its own conda env). Then ritme is used to perform a selected prediction task in `n2_run_ritme_model.ipynb` and additionally the original modelling approach is launched in `n4_original_setup.iypnb`. After the respective `n2_` notebooks ran, all trials are evaluated in `evaluate_all_trials.ipynb`.
-Additionally, to the ritme comparisons also autoML comparisons are launched for all usecases in the scripts `n5_generic_automl.ipynb` & `n5_generic_automl_u*.sh`.
+This repos displays 3 use cases: u1_amplicon_age_prediction (regression), u2_metagenome_ocean (regression) & u3_amplicon_crc_classification (binary classification). For each of these first the data is processed according to the original studies' pipeline in `n1_data.ipynb` (with its own conda env). Then ritme is used to perform a selected prediction task in `n2_run_ritme_model.ipynb` and additionally the original modelling approach is launched in `n4_original_setup.iypnb`. After the respective `n2_` notebooks ran, all trials are evaluated in `evaluate_all_trials.ipynb`.
+
+A legacy regression use case (formerly `u3`: `u3_mlp_prediction`, microbial-load prediction from Nishijima 2024) is parked under the `u3_legacy` USECASES key while the new `u3` (CRC classification) is evaluated head-to-head; it will be removed once that comparison is complete.
+Additionally, to the ritme comparisons also autoML comparisons are launched for all three usecases in `n5_generic_automl.ipynb` (regression for u1–u2, binary classification for u3 — task auto-dispatched from `USECASES[usecase]["task"]` in `src/launch_models.py`).
 
 ## Ritme's data flow
 
