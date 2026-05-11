@@ -20,7 +20,7 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, Optional
 
-from src.launch_models import REPO_ROOT, USECASES
+from src.launch_models import REPO_ROOT, USECASES, _default_slurm_time
 
 
 def _read_target(usecase: str) -> str:
@@ -55,6 +55,10 @@ def _ensure_qza_converted(usecase: str) -> None:
         )
 
 
+_DEFAULT_AUTOML_CPUS: int = 100
+_DEFAULT_AUTOML_MEM_PER_CPU_MB: int = 4096
+
+
 def submit_automl(
     usecase: str,
     *,
@@ -63,9 +67,9 @@ def submit_automl(
     logs_dir: str | os.PathLike = "use_cases/ritme_runs/local_automl",
     mode: str = "slurm",
     sbatch_extra: Optional[Iterable[str]] = None,
-    cpus: int = 100,
-    mem_per_cpu_mb: int = 4096,
-    slurm_time: str = "119:59:59",
+    cpus: Optional[int] = None,
+    mem_per_cpu_mb: Optional[int] = None,
+    slurm_time: Optional[str] = None,
     slurm_account: Optional[str] = None,
 ) -> subprocess.CompletedProcess:
     """Submit (or run locally) the auto-sklearn baseline for a use case.
@@ -73,15 +77,35 @@ def submit_automl(
     Parameters
     ----------
     usecase : "u1" | "u2" | "u3" | "u3_legacy"
-    total_time_s : auto-sklearn time budget.
+    total_time_s : auto-sklearn search budget (seconds). Default 428400
+        (~119 h) fills the 120 h SLURM tier; lower it for smoke tests.
     restricted_model : auto-sklearn estimator name. ``mlp``, ``random_forest``
         and ``gradient_boosting`` are valid for both regression and
         classification tasks; ``ard_regression`` is regression-only.
     logs_dir : parent dir for the auto-sklearn output and SLURM log.
     mode : "slurm" (default) submits via sbatch; "local" runs inline.
+    cpus, mem_per_cpu_mb : per-job SLURM allocation. ``None`` (default) uses
+        ``_DEFAULT_AUTOML_CPUS=100`` / ``_DEFAULT_AUTOML_MEM_PER_CPU_MB=4096``.
+        Pass explicit values to match ``launch_models.SLURM_RESOURCES`` for
+        an apples-to-apples resource comparison against ritme. Slurm-mode
+        only — ignored when ``mode="local"``.
+    slurm_time : SLURM walltime ``HH:MM:SS``. ``None`` (default) snaps
+        ``total_time_s`` to the smallest cluster tier (see
+        ``launch_models._default_slurm_time``).
     slurm_account : value for sbatch ``--account=...`` (a.k.a. SLURM share).
         ``None`` (default) leaves it unset and uses the cluster default.
     """
+    if cpus is None:
+        cpus = _DEFAULT_AUTOML_CPUS
+    if mem_per_cpu_mb is None:
+        mem_per_cpu_mb = _DEFAULT_AUTOML_MEM_PER_CPU_MB
+    if cpus <= 0 or mem_per_cpu_mb <= 0:
+        raise ValueError(
+            f"cpus and mem_per_cpu_mb must be positive; got "
+            f"cpus={cpus}, mem_per_cpu_mb={mem_per_cpu_mb}."
+        )
+    if slurm_time is None:
+        slurm_time = _default_slurm_time(total_time_s)
     if usecase not in USECASES:
         raise KeyError(f"Unknown usecase: {usecase!r}")
     _ensure_qza_converted(usecase)
