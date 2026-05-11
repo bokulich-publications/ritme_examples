@@ -37,6 +37,12 @@ set -euo pipefail
 : "${PATH_DATA_SPLITS?Required env var PATH_DATA_SPLITS is unset}"
 : "${LOGS_DIR?Required env var LOGS_DIR is unset}"
 
+# Raise per-user soft caps so Ray's prestart workers (one per detected CPU
+# on the compute node, typically ~128) don't exhaust nproc and leave no
+# budget for joblib to fork sklearn workers inside trainables.
+ulimit -u 60000
+ulimit -n 524288
+
 # 1. Convert QIIME2 artifacts to plain files where ritme expects them.
 if [[ -n "${QZA_INPUTS:-}" ]]; then
   for triple in $QZA_INPUTS; do
@@ -46,6 +52,12 @@ if [[ -n "${QZA_INPUTS:-}" ]]; then
     dst="${rest#*:}"
     if [[ -f "$dst" ]]; then
       echo "[skip] $dst already exists"
+    elif [[ ! -f "$src" ]]; then
+      # Missing source qza is fine when the destination is unused by this
+      # run (e.g. when train_val.pkl/test.pkl are pre-staged so the split
+      # step below is skipped). A downstream step that actually needs the
+      # missing file will error with a clear message there.
+      echo "[skip] $src not present; nothing to convert for $kind"
     else
       python -m src.convert_qiime2_artifacts "$kind" "$src" -o "$dst"
     fi
