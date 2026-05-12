@@ -28,12 +28,28 @@ from typing import Iterable, Optional
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = REPO_ROOT / "src/run_ritme_model.sh"
 
-# Per-use-case data + config paths. Each entry's `qza_inputs` lists the
-# (kind, src_qza, dst_plain) triples that the template will convert before
-# running ritme; `feature-table`, `taxonomy` and `tree` are the supported
-# kinds (see src/convert_qiime2_artifacts.py). SLURM resources (cpus /
-# mem_per_cpu_mb) and Ray-Tune concurrency live in the SLURM_RESOURCES and
-# MAX_CONCURRENT_TRIALS dicts below, keyed by (usecase, model_type).
+# Per-use-case data + config paths.
+#
+# Required fields:
+#   config_prefix, use_case_dir, data_splits, path_md, path_ft, path_tax,
+#   path_phylo, group_by_column, stratify_by, task, time_col, host_col,
+#   n_prev, qza_inputs.
+#
+# `qza_inputs` lists the (kind, src_qza, dst_plain) triples the template
+# converts before running ritme; `feature-table`, `taxonomy` and `tree` are
+# the supported kinds (see src/convert_qiime2_artifacts.py).
+#
+# `time_col` / `host_col` / `n_prev` enable ritme's sliding-window snapshot
+# pipeline (n_snapshots = n_prev + 1); leave all three as None for static
+# runs. `_build_env` raises if some are set and others are not.
+#
+# Optional field `base_config_prefix` lets a usecase share another's base
+# JSON (e.g. u1_dynamic reuses u1_base_tpe.json); the experiment_tag is
+# still derived from `config_prefix` so outputs stay separate.
+#
+# SLURM resources (cpus / mem_per_cpu_mb) and Ray-Tune concurrency live in
+# the SLURM_RESOURCES and MAX_CONCURRENT_TRIALS dicts below, keyed by
+# (usecase, model_type) and model_type respectively.
 USECASES: dict[str, dict] = {
     "u1": {
         "config_prefix": "u1",
@@ -46,6 +62,56 @@ USECASES: dict[str, dict] = {
         "group_by_column": "host_id",
         "stratify_by": None,
         "task": "regression",
+        # Temporal snapshot fields — None ⇒ static (default). Set
+        # `time_col`, `host_col`, `n_prev` together to enable ritme's
+        # sliding-window snapshot generation (see `u1_dynamic`).
+        "time_col": None,
+        "host_col": None,
+        "n_prev": None,
+        "qza_inputs": [
+            (
+                "feature-table",
+                "data/u1_subramanian14/otu_table_subr14_wq.qza",
+                "data/u1_subramanian14/otu_table_subr14_wq.tsv",
+            ),
+            (
+                "taxonomy",
+                "data/u1_subramanian14/taxonomy_subr14.qza",
+                "data/u1_subramanian14/taxonomy_subr14.tsv",
+            ),
+            (
+                "tree",
+                "data/u1_subramanian14/fasttree_tree_rooted_subr14.qza",
+                "data/u1_subramanian14/fasttree_tree_rooted_subr14.nwk",
+            ),
+        ],
+    },
+    "u1_dynamic": {
+        # Same data and base config as u1, but routes ritme through its
+        # sliding-window snapshot pipeline with n_snapshots = n_prev + 1 = 2
+        # (t0 + t-1) so each row is paired with its previous-timepoint
+        # snapshot per host. Rows lacking a t-1 snapshot are excluded
+        # (missing_mode="exclude" in run_ritme_model.sh).
+        # `base_config_prefix="u1"` reuses u1_base_tpe.json directly so the
+        # static/dynamic comparison can't drift via two separate JSON files.
+        "config_prefix": "u1_dynamic",
+        "base_config_prefix": "u1",
+        "use_case_dir": "use_cases/u1_amplicon_age_prediction",
+        "data_splits": "use_cases/u1_amplicon_age_prediction/data_splits_u1_dynamic",
+        "path_md": "data/u1_subramanian14/md_subr14.tsv",
+        "path_ft": "data/u1_subramanian14/otu_table_subr14_wq.tsv",
+        "path_tax": "data/u1_subramanian14/taxonomy_subr14.tsv",
+        "path_phylo": "data/u1_subramanian14/fasttree_tree_rooted_subr14.nwk",
+        "group_by_column": "host_id",
+        "stratify_by": None,
+        "task": "regression",
+        # `age_months_rounded1` is required (not `age_days`): ritme's snapshot
+        # pairer matches `t-1` literally on integer time values, and U1 is
+        # sampled at ~monthly cadence, so `age_days - 1` almost never exists
+        # but `age_months_rounded1 - 1` does for every host.
+        "time_col": "age_months_rounded1",
+        "host_col": "host_id",
+        "n_prev": 1,  # n_snapshots = n_prev + 1 = 2 (t0 + t-1)
         "qza_inputs": [
             (
                 "feature-table",
@@ -75,6 +141,9 @@ USECASES: dict[str, dict] = {
         "group_by_column": None,
         "stratify_by": None,
         "task": "regression",
+        "time_col": None,
+        "host_col": None,
+        "n_prev": None,
         "qza_inputs": [
             (
                 "taxonomy",
@@ -105,6 +174,9 @@ USECASES: dict[str, dict] = {
         "group_by_column": None,
         "stratify_by": "srn",
         "task": "classification",
+        "time_col": None,
+        "host_col": None,
+        "n_prev": None,
         "qza_inputs": [],
     },
     "u3_legacy": {
@@ -123,6 +195,9 @@ USECASES: dict[str, dict] = {
         "group_by_column": None,
         "stratify_by": None,
         "task": "regression",
+        "time_col": None,
+        "host_col": None,
+        "n_prev": None,
         "qza_inputs": [
             (
                 "taxonomy",
@@ -147,6 +222,15 @@ SLURM_RESOURCES: dict[tuple[str, str], dict] = {
     ("u1", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 4096},
     ("u1", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 4096},
     ("u1", "nn_corn"): {"cpus": 100, "mem_per_cpu_mb": 4096},
+    # u1_dynamic (same data as u1 but routed through ritme's snapshot
+    # pipeline with n_snapshots=2; resource footprint matches u1).
+    ("u1_dynamic", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
+    ("u1_dynamic", "rf"): {"cpus": 40, "mem_per_cpu_mb": 5120},
+    ("u1_dynamic", "trac"): {"cpus": 50, "mem_per_cpu_mb": 5120},
+    ("u1_dynamic", "xgb"): {"cpus": 50, "mem_per_cpu_mb": 4096},
+    ("u1_dynamic", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 4096},
+    ("u1_dynamic", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 4096},
+    ("u1_dynamic", "nn_corn"): {"cpus": 100, "mem_per_cpu_mb": 4096},
     # u2 (~36k features — trac matrix A + NN input layer need more memory)
     ("u2", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
     ("u2", "rf"): {"cpus": 40, "mem_per_cpu_mb": 5120},
@@ -199,10 +283,12 @@ def _resolve_config_for_run(
 
     Variants are kept as standalone files (`<prefix>_<model>_<sampler>_<variant>.json`)
     and consumed verbatim. Without a variant, the per-usecase base config is
-    augmented with `max_cuncurrent_trials` (from ``max_concurrent_trials``
-    if provided, otherwise :data:`MAX_CONCURRENT_TRIALS[model_type]`);
-    the resolved config is materialized into
-    `<logs_dir>/_resolved_configs/` for inspection.
+    loaded from ``<base_config_prefix>_base_<sampler>.json`` (falling back to
+    ``<config_prefix>_base_<sampler>.json`` when ``base_config_prefix`` is not
+    set on the USECASES entry) and augmented with `max_cuncurrent_trials`
+    (from ``max_concurrent_trials`` if provided, otherwise
+    :data:`MAX_CONCURRENT_TRIALS[model_type]`); the resolved config is
+    materialized into `<logs_dir>/_resolved_configs/` for inspection.
 
     Synthetic variant ``"no_enrich"`` derives from the base config the same
     way the no-variant path does, then strips
@@ -228,7 +314,13 @@ def _resolve_config_for_run(
             return path
         cfg = json.loads(path.read_text())
     else:
-        base_path = config_dir / f"{prefix}_base_{sampler}.json"
+        # Allow a usecase to share another's base config (e.g. u1_dynamic
+        # reuses u1's base); the experiment_tag below still uses `prefix`,
+        # so outputs land under the calling usecase's tag. Variants
+        # (`*_<sampler>_<variant>.json`) are loaded by `prefix` and do not
+        # inherit from `base_config_prefix`.
+        base_prefix = spec.get("base_config_prefix", prefix)
+        base_path = config_dir / f"{base_prefix}_base_{sampler}.json"
         if not base_path.exists():
             raise FileNotFoundError(f"Base config not found: {base_path}")
         cfg = json.loads(base_path.read_text())
@@ -280,6 +372,29 @@ def _build_env(usecase: str, config_path: Path, logs_dir: Path) -> dict:
         env["GROUP_BY_COLUMN"] = spec["group_by_column"]
     if spec["stratify_by"]:
         env["STRATIFY_BY_COLUMN"] = spec["stratify_by"]
+    # Snapshot pipeline: all three of time_col/host_col/n_prev must be set
+    # together (and n_prev must be a non-negative int) for the shell
+    # template to forward them as --time-col / --host-col / --n-prev to
+    # `ritme split-train-test`. Setting some but not all is rejected
+    # explicitly so a partial config can't silently become a static run
+    # under a "dynamic" experiment tag.
+    snapshot_fields = ("time_col", "host_col", "n_prev")
+    set_fields = [f for f in snapshot_fields if spec[f] is not None]
+    if 0 < len(set_fields) < 3:
+        raise ValueError(
+            f"USECASES[{usecase!r}] has a partial snapshot config "
+            f"(set: {set_fields}). Set all of {list(snapshot_fields)} "
+            f"together, or leave all three as None."
+        )
+    if len(set_fields) == 3:
+        if not isinstance(spec["n_prev"], int) or spec["n_prev"] < 0:
+            raise ValueError(
+                f"USECASES[{usecase!r}]['n_prev'] must be a non-negative "
+                f"int; got {spec['n_prev']!r}."
+            )
+        env["TIME_COL"] = spec["time_col"]
+        env["HOST_COL"] = spec["host_col"]
+        env["N_PREV"] = str(spec["n_prev"])
     if spec["qza_inputs"]:
         env["QZA_INPUTS"] = " ".join(
             f"{kind}:{REPO_ROOT / src}:{REPO_ROOT / dst}"
@@ -441,6 +556,9 @@ def submit_model(
                 "PATH_PHYLO",
                 "GROUP_BY_COLUMN",
                 "STRATIFY_BY_COLUMN",
+                "TIME_COL",
+                "HOST_COL",
+                "N_PREV",
                 "QZA_INPUTS",
                 "SHAP_MAX_BACKGROUND_SAMPLES",
             }

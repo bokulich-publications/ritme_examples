@@ -69,7 +69,7 @@ fi
 # --train-size, or --seed between runs).
 if [[ -f "${PATH_DATA_SPLITS}/train_val.pkl" && -f "${PATH_DATA_SPLITS}/test.pkl" ]]; then
   echo "Reusing existing splits in ${PATH_DATA_SPLITS}"
-  echo "  (current launch flags — group=${GROUP_BY_COLUMN:-none}, stratify=${STRATIFY_BY_COLUMN:-none}; verify these match the cached split)"
+  echo "  (current launch flags — group=${GROUP_BY_COLUMN:-none}, stratify=${STRATIFY_BY_COLUMN:-none}, time=${TIME_COL:-none}, host=${HOST_COL:-none}, n_prev=${N_PREV:-none}; verify these match the cached split)"
 else
   echo "Running split-train-test"
   mkdir -p "$PATH_DATA_SPLITS"
@@ -81,8 +81,16 @@ else
   if [[ -n "${STRATIFY_BY_COLUMN:-}" ]]; then
     stratify_args=(--stratify-by "$STRATIFY_BY_COLUMN")
   fi
+  snapshot_args=()
+  if [[ -n "${TIME_COL:-}" && -n "${HOST_COL:-}" && -n "${N_PREV:-}" ]]; then
+    # `--missing-mode exclude` is passed explicitly to work around a ritme
+    # CLI default of None that fails its own validation when the snapshot
+    # pipeline is enabled.
+    snapshot_args=(--time-col "$TIME_COL" --host-col "$HOST_COL" --n-prev "$N_PREV" --missing-mode exclude)
+  fi
   ritme split-train-test "$PATH_DATA_SPLITS" "$PATH_MD" "$PATH_FT" \
-    "${group_args[@]}" "${stratify_args[@]}" --train-size 0.8 --seed 12
+    "${group_args[@]}" "${stratify_args[@]}" "${snapshot_args[@]}" \
+    --train-size 0.8 --seed 12
 fi
 
 # 3. Find best model config.
