@@ -25,12 +25,8 @@ from src.launch_models import REPO_ROOT, USECASES, _default_slurm_time
 
 def _read_target(usecase: str) -> str:
     spec = USECASES[usecase]
-    base = (
-        REPO_ROOT
-        / spec["use_case_dir"]
-        / "config"
-        / f"{spec['config_prefix']}_base_tpe.json"
-    )
+    base_prefix = spec.get("base_config_prefix", spec["config_prefix"])
+    base = REPO_ROOT / spec["use_case_dir"] / "config" / f"{base_prefix}_base_tpe.json"
     return json.loads(base.read_text())["target"]
 
 
