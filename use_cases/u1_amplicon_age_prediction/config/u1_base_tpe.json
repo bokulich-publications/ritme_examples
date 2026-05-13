@@ -9,6 +9,7 @@
       "abx_7d_prior"
     ]
   },
+  "nn_corn_max_levels": 30,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,

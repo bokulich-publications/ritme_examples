@@ -9,6 +9,7 @@
       "longitude"
     ]
   },
+  "nn_corn_max_levels": 35,
   "optuna_searchspace_sampler": "TPESampler",
   "seed_data": 12,
   "seed_model": 12,
