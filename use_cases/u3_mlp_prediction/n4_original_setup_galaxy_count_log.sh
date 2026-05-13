@@ -1,18 +1,17 @@
 #!/bin/bash
 
 #SBATCH --job-name="n4_original_galaxy_log10"
-#SBATCH -A SLURM_SHARE
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=20
 #SBATCH --time=23:59:59
 #SBATCH --mem-per-cpu=4096
-#SBATCH --output="/cluster/project/bokulich/adamova/ritme_usecase_runs_final_time/logs/%x_out.txt"
+#SBATCH --output="/cluster/project/bokulich/adamova/ritme_examples/use_cases/ritme_runs/local/logs/%x_out.txt"
 #SBATCH --open-mode=append
 
 module load eth_proxy
 
 set -x
-python n4_original_setup.py galaxy count_log10
+mamba run -n ritme_usecases python n4_original_setup.py galaxy count_log10
 
 # get elapsed time of job
 sstat -j $SLURM_JOB_ID
