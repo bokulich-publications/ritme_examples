@@ -219,7 +219,7 @@ USECASES: dict[str, dict] = {
 #                     find-best-model-config budget; per-usecase identical
 #                     across model classes so the model-vs-feature-engineering
 #                     comparison is over equal search effort.
-#   gpus            : --gpus-per-task value (0 = no flag emitted)
+#   gpus            : --gpus-per-node value (0 = no flag emitted)
 #   slurm_account   : --account=... default for this (usecase, model);
 #                     kwarg `slurm_account=` on submit_model still wins.
 #
@@ -787,7 +787,7 @@ def submit_model(
         f"--export=ALL,{forwarded}",
     ]
     if gpus > 0:
-        cmd.append(f"--gpus-per-task={gpus}")
+        cmd.append(f"--gpus-per-node={gpus}")
     if slurm_account:
         cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
