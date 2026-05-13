@@ -208,65 +208,258 @@ USECASES: dict[str, dict] = {
     },
 }
 
-# Per-(usecase, model class) SLURM allocation (cpus + memory per CPU).
-# One row per actually-used (usecase, model) pair; submit_model raises a
-# KeyError on any other combination. Inline `# bump` / `# tighten` markers
-# call out deviations from a baseline shape of 30/3072 (linear), 40/5120
-# (rf), 50/5120 (trac), 50/4096 (xgb), 100/4096 (nn_*).
+# Per-(usecase, model class) SLURM allocation + ritme search budget +
+# share routing. One row per actually-used (usecase, model) pair;
+# submit_model raises a KeyError on any other combination.
+#
+# Fields:
+#   cpus            : --cpus-per-task value
+#   mem_per_cpu_mb  : --mem-per-cpu value (MiB)
+#   time_budget_s   : injected into the resolved ritme config as the
+#                     find-best-model-config budget; per-usecase identical
+#                     across model classes so the model-vs-feature-engineering
+#                     comparison is over equal search effort.
+#   gpus            : --gpus-per-task value (0 = no flag emitted)
+#   slurm_account   : --account=... default for this (usecase, model);
+#                     kwarg `slurm_account=` on submit_model still wins.
+#
+# Sized post-PR #111 (K-fold + adaptive TPE startup): cpus so that
+# cpus_per_trial = cpus // MAX_CONCURRENT_TRIALS[model] is at least
+# K_default = 5 for sklearn-style models (otherwise the parallel K-fold
+# fan-out collapses to sequential). NN rows request 2 GPUs with mct=2
+# → 1 GPU/trial on es_ilic.
 SLURM_RESOURCES: dict[tuple[str, str], dict] = {
-    # u1 (~850 OTUs after cleaning, repeated measures per host)
-    ("u1", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
-    ("u1", "rf"): {"cpus": 40, "mem_per_cpu_mb": 5120},
-    ("u1", "trac"): {"cpus": 50, "mem_per_cpu_mb": 5120},
-    ("u1", "xgb"): {"cpus": 50, "mem_per_cpu_mb": 4096},
-    ("u1", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    ("u1", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    ("u1", "nn_corn"): {"cpus": 100, "mem_per_cpu_mb": 4096},
+    # u1 (~850 OTUs after cleaning, repeated measures per host; 23 h budget)
+    ("u1", "linreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 3072,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1", "rf"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 5120,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1", "trac"): {
+        "cpus": 60,
+        "mem_per_cpu_mb": 6144,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1", "xgb"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 4096,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1", "nn_reg"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u1", "nn_class"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u1", "nn_corn"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
     # u1_dynamic (same data as u1 but routed through ritme's snapshot
     # pipeline with n_snapshots=2; resource footprint matches u1).
-    ("u1_dynamic", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
-    ("u1_dynamic", "rf"): {"cpus": 40, "mem_per_cpu_mb": 5120},
-    ("u1_dynamic", "trac"): {"cpus": 50, "mem_per_cpu_mb": 5120},
-    ("u1_dynamic", "xgb"): {"cpus": 50, "mem_per_cpu_mb": 4096},
-    ("u1_dynamic", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    ("u1_dynamic", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    ("u1_dynamic", "nn_corn"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    # u2 (~36k features — trac matrix A + NN input layer need more memory)
-    ("u2", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
-    ("u2", "rf"): {"cpus": 40, "mem_per_cpu_mb": 5120},
-    ("u2", "trac"): {"cpus": 50, "mem_per_cpu_mb": 6144},  # bump
-    ("u2", "xgb"): {"cpus": 50, "mem_per_cpu_mb": 4096},
-    ("u2", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 6144},  # bump
-    ("u2", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 6144},  # bump
-    ("u2", "nn_corn"): {"cpus": 100, "mem_per_cpu_mb": 6144},  # bump
-    # u3 (~11k features, CRC binary classification — classifier model set)
-    ("u3", "logreg"): {"cpus": 30, "mem_per_cpu_mb": 3072},
-    ("u3", "rf_class"): {"cpus": 40, "mem_per_cpu_mb": 5120},
-    ("u3", "xgb_class"): {"cpus": 50, "mem_per_cpu_mb": 4096},
-    ("u3", "nn_class"): {"cpus": 100, "mem_per_cpu_mb": 4096},
-    # u3_legacy (~2k features — narrower data fits in less memory)
-    ("u3_legacy", "linreg"): {"cpus": 30, "mem_per_cpu_mb": 2048},  # tighten
-    ("u3_legacy", "rf"): {"cpus": 40, "mem_per_cpu_mb": 3072},  # tighten
-    ("u3_legacy", "xgb"): {"cpus": 50, "mem_per_cpu_mb": 3072},  # tighten
-    ("u3_legacy", "nn_reg"): {"cpus": 100, "mem_per_cpu_mb": 3072},  # tighten
+    ("u1_dynamic", "linreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 3072,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1_dynamic", "rf"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 5120,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1_dynamic", "trac"): {
+        "cpus": 60,
+        "mem_per_cpu_mb": 6144,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1_dynamic", "xgb"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 4096,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u1_dynamic", "nn_reg"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u1_dynamic", "nn_class"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u1_dynamic", "nn_corn"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    # u2 (~36k features — wider table dominates trac/NN memory; 23 h budget)
+    ("u2", "linreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 4096,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u2", "rf"): {
+        "cpus": 60,
+        "mem_per_cpu_mb": 6144,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u2", "trac"): {
+        "cpus": 80,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u2", "xgb"): {
+        "cpus": 60,
+        "mem_per_cpu_mb": 6144,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u2", "nn_reg"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 12288,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u2", "nn_class"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 12288,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    ("u2", "nn_corn"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 12288,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    # u3 (~11k features, CRC binary classification — classifier model set; 23 h)
+    ("u3", "logreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 3072,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3", "rf_class"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 5120,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3", "xgb_class"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 4096,
+        "time_budget_s": 82800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3", "nn_class"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 8192,
+        "time_budget_s": 82800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
+    # u3_legacy (~2k features — fits the 4 h tier)
+    ("u3_legacy", "linreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 2048,
+        "time_budget_s": 10800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3_legacy", "rf"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 3072,
+        "time_budget_s": 10800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3_legacy", "xgb"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 3072,
+        "time_budget_s": 10800,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u3_legacy", "nn_reg"): {
+        "cpus": 16,
+        "mem_per_cpu_mb": 6144,
+        "time_budget_s": 10800,
+        "gpus": 2,
+        "slurm_account": "es_ilic",
+    },
 }
 
 # Number of trials ritme runs in parallel within one sbatch job (applies in
 # both slurm and local modes — controls ritme's Ray Tune concurrency, not
-# the sbatch allocation). Does not currently vary by usecase. The
-# (mis-)spelling `max_cuncurrent_trials` matches ritme's config key so the
-# dict can be merged into the resolved config directly.
+# the sbatch allocation). Tuned so the per-trial CPU budget ritme derives
+# (cpus_per_task // mct, see ritme.tune_models._get_resources) is at least
+# K_default = 5 for sklearn-style models — otherwise PR #111's parallel
+# K-fold fan-out collapses to sequential. NN values give 1 GPU/trial on
+# es_ilic when paired with `gpus=2` above. The (mis-)spelling
+# `max_cuncurrent_trials` matches ritme's config key so the dict can be
+# merged into the resolved config directly.
 MAX_CONCURRENT_TRIALS: dict[str, int] = {
-    "linreg": 80,
-    "rf": 80,
-    "trac": 80,
-    "xgb": 80,
-    "nn_reg": 10,
-    "nn_class": 10,
-    "nn_corn": 10,
-    "logreg": 80,
-    "rf_class": 80,
-    "xgb_class": 80,
+    "linreg": 10,
+    "rf": 10,
+    "trac": 10,
+    "xgb": 10,
+    "nn_reg": 2,
+    "nn_class": 2,
+    "nn_corn": 2,
+    "logreg": 10,
+    "rf_class": 10,
+    "xgb_class": 10,
 }
 
 
@@ -276,6 +469,7 @@ def _resolve_config_for_run(
     sampler: str,
     variant: Optional[str],
     logs_dir: Path,
+    time_budget_s_default: Optional[int] = None,
     config_overrides: Optional[dict] = None,
     max_concurrent_trials: Optional[int] = None,
 ) -> Path:
@@ -345,6 +539,11 @@ def _resolve_config_for_run(
                 f"Add an entry to src/launch_models.py:MAX_CONCURRENT_TRIALS or "
                 f"pass max_concurrent_trials= explicitly on submit_model."
             ) from e
+
+    if time_budget_s_default is not None:
+        # Per-(usecase, model) default from SLURM_RESOURCES. Notebook-level
+        # config_overrides={"time_budget_s": ...} still wins (applied below).
+        cfg["time_budget_s"] = time_budget_s_default
 
     if config_overrides:
         cfg.update(config_overrides)
@@ -501,12 +700,20 @@ def submit_model(
         logs_path = REPO_ROOT / logs_path
     logs_path.mkdir(parents=True, exist_ok=True)
 
+    # Look up SLURM_RESOURCES early so we can forward `time_budget_s` into
+    # the resolved config in both modes. Missing entry is fatal only for
+    # slurm submission (the strict check happens below); local mode just
+    # carries on with whatever the base config already has.
+    res = SLURM_RESOURCES.get((usecase, model_type))
+    time_budget_s_default = res.get("time_budget_s") if res else None
+
     config_path = _resolve_config_for_run(
         usecase,
         model_type,
         sampler,
         variant,
         logs_path,
+        time_budget_s_default=time_budget_s_default,
         config_overrides=config_overrides,
         max_concurrent_trials=max_concurrent_trials,
     )
@@ -519,21 +726,24 @@ def submit_model(
     if mode != "slurm":
         raise ValueError(f"Unknown mode: {mode!r}")
 
-    try:
-        res = SLURM_RESOURCES[(usecase, model_type)]
-    except KeyError as e:
+    if res is None:
         raise KeyError(
             f"No SLURM allocation registered for {(usecase, model_type)!r}. "
             f"Add an entry to src/launch_models.py:SLURM_RESOURCES or pass "
             f"cpus= and mem_per_cpu_mb= explicitly on submit_model."
-        ) from e
+        )
     cpus = res["cpus"] if cpus is None else cpus
     mem_per_cpu_mb = res["mem_per_cpu_mb"] if mem_per_cpu_mb is None else mem_per_cpu_mb
+    gpus = res.get("gpus", 0)
     if cpus <= 0 or mem_per_cpu_mb <= 0:
         raise ValueError(
             f"cpus and mem_per_cpu_mb must be positive; got "
             f"cpus={cpus}, mem_per_cpu_mb={mem_per_cpu_mb}."
         )
+    if gpus < 0:
+        raise ValueError(f"gpus must be non-negative; got gpus={gpus}.")
+    if slurm_account is None:
+        slurm_account = res.get("slurm_account")
     if slurm_time is None:
         resolved_cfg = json.loads(config_path.read_text())
         slurm_time = _default_slurm_time(resolved_cfg["time_budget_s"])
@@ -576,6 +786,8 @@ def submit_model(
         "--open-mode=append",
         f"--export=ALL,{forwarded}",
     ]
+    if gpus > 0:
+        cmd.append(f"--gpus-per-task={gpus}")
     if slurm_account:
         cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
