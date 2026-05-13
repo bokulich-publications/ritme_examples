@@ -196,3 +196,6 @@ use_cases/archive_result_figures_ritmev128/*
 # any personal scratch files or folders
 x_*
 ~$*
+
+# claude
+.claude/*
