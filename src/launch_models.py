@@ -179,33 +179,6 @@ USECASES: dict[str, dict] = {
         "n_prev": None,
         "qza_inputs": [],
     },
-    "u3_legacy": {
-        # Former U3 (microbial load / Nishijima 2024 / MLP regression).
-        # Parked under this key while U3 = CRC classification is evaluated;
-        # remove this entry once the new U3 is confirmed as the keeper.
-        # Configs are named "u3_galaxy_log_<...>.json" — keep that prefix
-        # so the launcher can resolve them.
-        "config_prefix": "u3_galaxy_log",
-        "use_case_dir": "use_cases/u3_mlp_prediction",
-        "data_splits": "use_cases/u3_mlp_prediction/data_splits_u3_galaxy_log",
-        "path_md": "data/u3_mlp_nishijima24/md_galaxy.tsv",
-        "path_ft": "data/u3_mlp_nishijima24/galaxy_otu_table.tsv",
-        "path_tax": "data/u3_mlp_nishijima24/u3_taxonomy.tsv",
-        "path_phylo": None,
-        "group_by_column": None,
-        "stratify_by": None,
-        "task": "regression",
-        "time_col": None,
-        "host_col": None,
-        "n_prev": None,
-        "qza_inputs": [
-            (
-                "taxonomy",
-                "data/u3_mlp_nishijima24/u3_taxonomy.qza",
-                "data/u3_mlp_nishijima24/u3_taxonomy.tsv",
-            ),
-        ],
-    },
 }
 
 # Per-(usecase, model class) SLURM allocation + ritme search budget +
@@ -403,35 +376,6 @@ SLURM_RESOURCES: dict[tuple[str, str], dict] = {
         "slurm_account": None,
     },
     ("u3", "nn_class"): {
-        "cpus": 16,
-        "mem_per_cpu_mb": 2048,
-        "time_budget_s": 82800,
-        "gpus": 2,
-        "slurm_account": "es_ilic",
-    },
-    # u3_legacy (~2k features — fits the 4 h tier)
-    ("u3_legacy", "linreg"): {
-        "cpus": 50,
-        "mem_per_cpu_mb": 2048,
-        "time_budget_s": 82800,
-        "gpus": 0,
-        "slurm_account": None,
-    },
-    ("u3_legacy", "rf"): {
-        "cpus": 50,
-        "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
-        "gpus": 0,
-        "slurm_account": None,
-    },
-    ("u3_legacy", "xgb"): {
-        "cpus": 50,
-        "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
-        "gpus": 0,
-        "slurm_account": None,
-    },
-    ("u3_legacy", "nn_reg"): {
         "cpus": 16,
         "mem_per_cpu_mb": 2048,
         "time_budget_s": 82800,
@@ -665,7 +609,7 @@ def submit_model(
 
     Parameters
     ----------
-    usecase : "u1" | "u2" | "u3" | "u3_legacy"
+    usecase : "u1" | "u2" | "u3"
     model_type : ritme model class (e.g. "linreg", "xgb", "rf", "trac",
         "nn_reg", "nn_class", "nn_corn", "logreg", "rf_class", "xgb_class").
     sampler : Optuna sampler tag baked into the config filename (default "tpe").
