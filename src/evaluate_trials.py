@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import plotly.io as pio
 import seaborn as sns
-from scipy.stats import kruskal
 
 ###############################
 # Global plotting parameters  #
@@ -245,6 +244,16 @@ PRESET_COLOR_ORDERS: dict[str, list[str]] = {
 }
 
 
+# Classification variants of regression trainables share the same palette
+# slot as their regression counterpart, so cross-task figures keep a
+# consistent legend (e.g. ``rf_class`` and ``rf`` appear in the same hue).
+MODEL_ALIASES: dict[str, str] = {
+    "rf_class": "rf",
+    "xgb_class": "xgb",
+    "logreg": "linreg",
+}
+
+
 def get_consistent_color_map(
     df: pd.DataFrame,
     column: str,
@@ -270,6 +279,14 @@ def get_consistent_color_map(
         }
     else:
         existing = GLOBAL_COLOR_REGISTRY.get(column, {}).copy()
+
+    # Alias classification trainable names onto their regression counterparts'
+    # palette slot so figures that mix tasks (e.g. ``usecase = "all"``) keep
+    # ``rf`` and ``rf_class`` the same hue. Only applies to ``params.model``.
+    if column == "params.model":
+        for alias, primary in MODEL_ALIASES.items():
+            if primary in existing:
+                existing[alias] = existing[primary]
 
     # Ensure the explicit "nan" string category is always mapped to lightgray.
     # We'll also use this color for true NaN values at return time.
@@ -481,6 +498,7 @@ def plot_trend_over_time_multi_models(
     title_prefix: str = "Model: ",
     figsize: tuple | None = None,
     raw_alpha: float = 0.35,
+    raw_color: str = "gray",
     trend_palette: str = "colorblind",
     std_alpha: float = 0.15,
     font_scale: float | None = None,
@@ -554,7 +572,7 @@ def plot_trend_over_time_multi_models(
             ax.scatter(
                 d["trial_index"],
                 d[y_col],
-                color=color,
+                color=raw_color,
                 alpha=raw_alpha,
                 s=10,
             )
@@ -643,6 +661,7 @@ def multi_boxplot_metric(
     metric_name: str,
     group_specs: list,
     order_by_median: bool = True,
+    metric_ascending: bool = True,
     figsize=None,
     font_scale=None,
     dpi=None,
@@ -654,11 +673,9 @@ def multi_boxplot_metric(
     sep_lw: float = 0.8,
     sep_alpha: float = 0.85,
     title: str = "",
-    alpha: float = 0.05,
     x_log_scale: bool = False,
 ):
-    """Create stacked horizontal boxplots by groups; annotate Kruskal–Wallis
-    p-values."""
+    """Create stacked horizontal boxplots by groups."""
     _set_seaborn_context(font_scale)
 
     n = len(group_specs)
@@ -677,8 +694,6 @@ def multi_boxplot_metric(
         axes = [axes]
     # Determine a consistent color map per unique category per group.
     palette_cache = {}
-    p_values = []  # collect (group_label, p_value or None)
-
     MISSING_CATEGORY_LABEL = "nan"
     for ax, (gcol, glabel) in zip(axes, group_specs):
         # Keep rows with metric present; map NaN groups to a visible category label
@@ -698,7 +713,10 @@ def multi_boxplot_metric(
         order = None
         if order_by_median:
             order = (
-                subset.groupby(gcol)[metric_col].median().sort_values().index.tolist()
+                subset.groupby(gcol)[metric_col]
+                .median()
+                .sort_values(ascending=metric_ascending)
+                .index.tolist()
             )
         sns.boxplot(
             x=metric_col,
@@ -717,26 +735,6 @@ def multi_boxplot_metric(
         ax.grid(True, axis="x", alpha=0.3)
         # Remove spines for cleaner look
         sns.despine(ax=ax, left=False, bottom=True)
-
-        # Significance test across categories for this group column
-        # Kruskal–Wallis; requires at least 2 non-empty groups
-        try:
-            groups = [vals[metric_col].values for _, vals in subset.groupby(gcol)]
-            groups = [g for g in groups if len(g) > 0]
-            p_value = None
-            if len(groups) >= 2:
-                stat, p_value = kruskal(*groups)
-                if p_value == 0.0:
-                    p_value = math.ulp(0.0)
-            if p_value is not None:
-                if p_value == math.ulp(0.0):
-                    label = f"p<{p_value:.3g}"
-                else:
-                    label = f"p={p_value:.3g}"
-                ax.text(0.98, 0.98, label, transform=ax.transAxes, ha="right", va="top")
-            p_values.append((glabel, p_value))
-        except Exception:
-            p_values.append((glabel, None))
 
     # Optionally apply logarithmic scale to the shared x-axis
     if x_log_scale:
@@ -787,16 +785,6 @@ def multi_boxplot_metric(
             )
     plt.show()
 
-    # Print p-values per group after plotting
-    print("Group significance p-values (Kruskal–Wallis):")
-    for glabel, p in p_values:
-        if p is None:
-            print(f"  {glabel}: n/a")
-        else:
-            if p == math.ulp(0.0):
-                print(f"  {glabel}: p<{p:.3g}")
-            else:
-                print(f"  {glabel}: p={p:.3g}")
     return fig, axes
 
 
