@@ -15,7 +15,13 @@ from src.eval_automl import (
     get_metrics_n_scatterplot,
 )
 
-REGRESSION_MODELS = ["ard_regression", "gradient_boosting", "mlp", "random_forest"]
+REGRESSION_MODELS = [
+    "ard_regression",
+    "gradient_boosting",
+    "mlp",
+    "random_forest",
+    "sgd",
+]
 CLASSIFICATION_MODELS = ["gradient_boosting", "mlp", "random_forest"]
 
 
