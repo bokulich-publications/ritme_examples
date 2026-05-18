@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import subprocess
 from pprint import pprint
 
 import autosklearn.classification
@@ -60,12 +61,62 @@ def parse_args():
     return p.parse_args()
 
 
+_CONVERTER_ENV = "ritme_usecases"
+
+
+def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
+    """Read a train/test split frame, converting pkl -> parquet on the fly when needed.
+
+    Pickled DataFrames embed NumPy module paths (`numpy.core.*` for NumPy 1.x,
+    `numpy._core.*` for NumPy 2.x) and so cannot cross the NumPy 1<->2 boundary.
+    This module runs in the autosklearn env (NumPy 1.x), but splits may have been
+    written by the ritme env (NumPy 2.x) -- in which case the bare pickle is
+    unreadable here (`ModuleNotFoundError: numpy._core`).
+
+    Resolution order:
+      1. If `<name>.parquet` exists, read it (parquet has no Python module refs,
+         so it round-trips cleanly across NumPy major versions).
+      2. Else try `<name>.pkl`. If that works (e.g. the pickle was written under
+         the matching NumPy major version), return it.
+      3. Else assume a NumPy major-version mismatch on the pickle and shell out to
+         the `{_CONVERTER_ENV}` env -- which has NumPy 2.x and can read both pickle
+         flavors -- to write `<name>.parquet` next to the pkl. Then read parquet.
+
+    The conversion is one-shot: the resulting parquet stays on disk, so subsequent
+    reads hit step (1) directly.
+    """
+    parquet_path = os.path.join(data_splits_folder, f"{name}.parquet")
+    pkl_path = os.path.join(data_splits_folder, f"{name}.pkl")
+    if os.path.exists(parquet_path):
+        return pd.read_parquet(parquet_path)
+    try:
+        return pd.read_pickle(pkl_path)
+    except (ModuleNotFoundError, ImportError):
+        # NumPy major-version mismatch on the pickle. Convert via the env that
+        # wrote it -- that env can read pickles of both NumPy flavors.
+        print(
+            f"Pickle {pkl_path!r} unreadable in this env "
+            f"(NumPy 1<->2 mismatch). Converting to parquet via "
+            f"{_CONVERTER_ENV!r} env...",
+            flush=True,
+        )
+        convert_code = (
+            "import pandas as pd; "
+            f"pd.read_pickle({pkl_path!r}).to_parquet({parquet_path!r}, index=True)"
+        )
+        subprocess.run(
+            ["mamba", "run", "-n", _CONVERTER_ENV, "python", "-c", convert_code],
+            check=True,
+        )
+        return pd.read_parquet(parquet_path)
+
+
 def main():
     args = parse_args()
 
     # load indices
-    train_df = pd.read_pickle(f"{args.data_splits_folder}/train_val.pkl")
-    test_df = pd.read_pickle(f"{args.data_splits_folder}/test.pkl")
+    train_df = _read_split(args.data_splits_folder, "train_val")
+    test_df = _read_split(args.data_splits_folder, "test")
     train_idx = train_df.index.tolist()
     test_idx = test_df.index.tolist()
 
