@@ -1,4 +1,6 @@
 # script needed since sklearn is way older in autosklearn conda env than ritme
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,7 +9,10 @@ from matplotlib.transforms import offset_copy
 from scipy.stats import pearsonr
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     f1_score,
+    log_loss,
+    matthews_corrcoef,
     mean_squared_error,
     precision_score,
     r2_score,
@@ -135,6 +140,65 @@ def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
     return metrics, fig
 
 
+def _bootstrap_classification_cis(
+    y_true: np.ndarray,
+    y_proba: np.ndarray,
+    y_pred: np.ndarray,
+    n_resamples: int = 1000,
+    ci: float = 0.95,
+    seed: int = 12,
+) -> dict[str, tuple[float, float]]:
+    """Percentile-bootstrap CIs for the binary-classification metric set.
+
+    Mirrors `src.bootstrap_metrics.bootstrap_classification_metrics` (same
+    defaults, same seed, same metrics, same threshold of 0.5 already baked
+    into ``y_pred``). Re-implemented inline here so the autosklearn env --
+    whose sklearn predates ``root_mean_squared_error`` -- can import this
+    module; the upstream `bootstrap_metrics` module top-level imports that
+    symbol.
+
+    Returns ``{metric: (ci_low, ci_high)}`` for ``auroc``, ``accuracy``,
+    ``f1``, ``precision``, ``recall``. AUROC resamples that draw a single
+    class are skipped (AUROC undefined); if every resample is degenerate
+    the AUROC CI is NaN.
+    """
+    n = y_true.shape[0]
+    rng = np.random.default_rng(seed)
+    auroc_b: list = []
+    accuracy_b: list = []
+    f1_b: list = []
+    precision_b: list = []
+    recall_b: list = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, n, size=n)
+        yt, yp_proba, yp = y_true[idx], y_proba[idx], y_pred[idx]
+        if np.unique(yt).size > 1:
+            auroc_b.append(roc_auc_score(yt, yp_proba))
+        accuracy_b.append(accuracy_score(yt, yp))
+        f1_b.append(f1_score(yt, yp, zero_division=0))
+        precision_b.append(precision_score(yt, yp, zero_division=0))
+        recall_b.append(recall_score(yt, yp, zero_division=0))
+
+    alpha = (1.0 - ci) / 2.0
+    out: dict[str, tuple[float, float]] = {}
+    for name, samples in [
+        ("auroc", auroc_b),
+        ("accuracy", accuracy_b),
+        ("f1", f1_b),
+        ("precision", precision_b),
+        ("recall", recall_b),
+    ]:
+        arr = np.asarray(samples, dtype=float)
+        if arr.size == 0:
+            out[name] = (float("nan"), float("nan"))
+        else:
+            out[name] = (
+                float(np.quantile(arr, alpha)),
+                float(np.quantile(arr, 1 - alpha)),
+            )
+    return out
+
+
 def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
     """Auto-sklearn classification analog of :func:`get_metrics_n_scatterplot`.
 
@@ -142,29 +206,64 @@ def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
     original-baseline outputs share the same metric layout, but lives here
     to keep `src/eval_automl.py` importable in the autosklearn env (whose
     sklearn is far older than ritme's).
+
+    Also emits the ritme-aligned classification metric set
+    (``roc_auc_macro_ovr``, ``log_loss``, ``f1_macro``, ``balanced_accuracy``,
+    ``mcc`` per split) and the test-set percentile bootstrap CIs that
+    `merge_best_metrics.py` pivots out of `bootstrap_test_metrics.csv` for
+    ritme runs, so an autoML row sits in the same column space as ritme +
+    original-baseline rows when concatenated in `evaluate_all_trials.ipynb`.
+    Assumes binary classification (positive class encoded as 1); U3 is the
+    only classification usecase here.
     """
     model_type = "automl"
     dic_data = {"train": (X_train, y_train), "test": (X_test, y_test)}
+    classes = list(model.classes_)
 
     metrics = pd.DataFrame()
     fig, axs = plt.subplots(1, 2, figsize=(12, 5), dpi=400)
     colors = {"train": "cornflowerblue", "test": "coral"}
 
+    test_eval: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None
     for ax, (split, (X, y)) in zip(axs, dic_data.items()):
-        y_proba = model.predict_proba(X)[:, 1]
+        y_proba_full = model.predict_proba(X)
+        y_proba = y_proba_full[:, 1]
         y_pred = (y_proba >= 0.5).astype(int)
+        y_arr = np.asarray(y)
 
-        metrics.loc[model_type, f"auroc_{split}"] = roc_auc_score(y, y_proba)
-        metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y, y_pred)
-        metrics.loc[model_type, f"f1_{split}"] = f1_score(y, y_pred, zero_division=0)
+        metrics.loc[model_type, f"auroc_{split}"] = roc_auc_score(y_arr, y_proba)
+        metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y_arr, y_pred)
+        metrics.loc[model_type, f"f1_{split}"] = f1_score(
+            y_arr, y_pred, zero_division=0
+        )
         metrics.loc[model_type, f"precision_{split}"] = precision_score(
-            y, y_pred, zero_division=0
+            y_arr, y_pred, zero_division=0
         )
         metrics.loc[model_type, f"recall_{split}"] = recall_score(
-            y, y_pred, zero_division=0
+            y_arr, y_pred, zero_division=0
         )
 
-        fpr, tpr, _ = roc_curve(y, y_proba)
+        # ritme-aligned set, matches ritme._calculate_classification_metrics
+        # for the binary branch (len(classes) == 2): macro_ovr AUC reduces
+        # to `roc_auc_score(y, y_proba[:, 1])`.
+        metrics.loc[model_type, f"roc_auc_macro_ovr_{split}"] = roc_auc_score(
+            y_arr, y_proba
+        )
+        metrics.loc[model_type, f"log_loss_{split}"] = log_loss(
+            y_arr, y_proba_full, labels=classes
+        )
+        metrics.loc[model_type, f"f1_macro_{split}"] = f1_score(
+            y_arr, y_pred, average="macro"
+        )
+        metrics.loc[model_type, f"balanced_accuracy_{split}"] = balanced_accuracy_score(
+            y_arr, y_pred
+        )
+        metrics.loc[model_type, f"mcc_{split}"] = matthews_corrcoef(y_arr, y_pred)
+
+        if split == "test":
+            test_eval = (y_arr, y_proba, y_pred)
+
+        fpr, tpr, _ = roc_curve(y_arr, y_proba)
         auroc = metrics.loc[model_type, f"auroc_{split}"]
         ax.plot(
             fpr,
@@ -175,9 +274,16 @@ def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
         ax.plot([0, 1], [0, 1], color="grey", linestyle="--", linewidth=1)
         ax.set_xlabel("False positive rate")
         ax.set_ylabel("True positive rate")
-        ax.set_title(f"{split.capitalize()} (n={len(y)})")
+        ax.set_title(f"{split.capitalize()} (n={len(y_arr)})")
         ax.set_aspect("equal")
         ax.legend(loc="lower right")
+
+    assert test_eval is not None
+    y_true_t, y_proba_t, y_pred_t = test_eval
+    cis = _bootstrap_classification_cis(y_true_t, y_proba_t, y_pred_t)
+    for name, (lo, hi) in cis.items():
+        metrics.loc[model_type, f"{name}_test_ci_low"] = lo
+        metrics.loc[model_type, f"{name}_test_ci_high"] = hi
 
     fig.tight_layout()
     return metrics, fig
