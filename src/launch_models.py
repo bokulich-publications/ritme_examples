@@ -127,175 +127,150 @@ SLURM_RESOURCES: dict[tuple[str, str], dict] = {
     ("u1", "linreg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "rf"): {
         "cpus": 50,
         "mem_per_cpu_mb": 5120,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "trac"): {
         "cpus": 60,
         "mem_per_cpu_mb": 6144,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "xgb"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "nn_reg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "nn_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1", "nn_corn"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "linreg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "rf"): {
         "cpus": 50,
         "mem_per_cpu_mb": 5120,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "trac"): {
         "cpus": 60,
         "mem_per_cpu_mb": 6144,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "xgb"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "nn_reg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "nn_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u1_dynamic", "nn_corn"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "linreg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "rf"): {
         "cpus": 60,
         "mem_per_cpu_mb": 6144,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "trac"): {
         "cpus": 80,
         "mem_per_cpu_mb": 8192,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "xgb"): {
         "cpus": 60,
         "mem_per_cpu_mb": 6144,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "nn_reg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "nn_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u2", "nn_corn"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u3", "logreg"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u3", "rf_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 5120,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u3", "xgb_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 4096,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
     ("u3", "nn_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
-        "time_budget_s": 82800,
         "gpus": 0,
         "slurm_account": None,
     },
@@ -321,7 +296,6 @@ def _resolve_config_for_run(
     sampler: str,
     variant: Optional[str],
     logs_dir: Path,
-    time_budget_s_default: Optional[int] = None,
     config_overrides: Optional[dict] = None,
     max_concurrent_trials: Optional[int] = None,
 ) -> Path:
@@ -364,9 +338,6 @@ def _resolve_config_for_run(
                 f"Add an entry to src/launch_models.py:MAX_CONCURRENT_TRIALS or "
                 f"pass max_concurrent_trials= explicitly on submit_model."
             ) from e
-
-    if time_budget_s_default is not None:
-        cfg["time_budget_s"] = time_budget_s_default
 
     if config_overrides:
         cfg.update(config_overrides)
@@ -474,7 +445,6 @@ def submit_model(
     logs_path.mkdir(parents=True, exist_ok=True)
 
     res = SLURM_RESOURCES.get((usecase, model_type))
-    time_budget_s_default = res.get("time_budget_s") if res else None
 
     config_path = _resolve_config_for_run(
         usecase,
@@ -482,7 +452,6 @@ def submit_model(
         sampler,
         variant,
         logs_path,
-        time_budget_s_default=time_budget_s_default,
         config_overrides=config_overrides,
         max_concurrent_trials=max_concurrent_trials,
     )
