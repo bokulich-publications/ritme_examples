@@ -71,7 +71,8 @@ def get_metrics_n_scatterplot(model, X_train, y_train, X_test, y_test):
 def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
     """Classification analog of :func:`get_metrics_n_scatterplot`.
 
-    Computes AUROC, accuracy, F1, precision, recall on train and test sets,
+    Computes AUROC, accuracy, F1 (binary + macro), precision, recall on
+    train and test sets,
     and draws side-by-side train/test ROC curves. Returns
     ``(metrics_df, fig)``.
 
@@ -90,6 +91,9 @@ def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
         metrics.loc[model_type, f"auroc_{split}"] = roc_auc_score(y, y_proba)
         metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y, y_pred)
         metrics.loc[model_type, f"f1_{split}"] = f1_score(y, y_pred, zero_division=0)
+        metrics.loc[model_type, f"f1_macro_{split}"] = f1_score(
+            y, y_pred, average="macro", zero_division=0
+        )
         metrics.loc[model_type, f"precision_{split}"] = precision_score(
             y, y_pred, zero_division=0
         )
