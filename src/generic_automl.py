@@ -11,6 +11,7 @@ import pandas as pd
 from autosklearn.ensembles import SingleBest
 from autosklearn.metrics import roc_auc, root_mean_squared_error
 
+from src.comparator_common import load_xy
 from src.eval_automl import (
     get_metrics_n_roc_curve,
     get_metrics_n_scatterplot,
@@ -57,6 +58,16 @@ def parse_args():
         "--single-best",
         action="store_true",
         help=("If set, restrict Auto-Sklearn to single best model - no ensembles."),
+    )
+    p.add_argument(
+        "--enrich-with",
+        dest="enrich_with",
+        action="append",
+        default=[],
+        help=(
+            "Metadata column to append to the feature table, repeatable. "
+            "Mirrors ritme's `data_enrich_with`; see src/launch_automl.py."
+        ),
     )
     return p.parse_args()
 
@@ -114,29 +125,19 @@ def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
 def main():
     args = parse_args()
 
-    # load indices
-    train_df = _read_split(args.data_splits_folder, "train_val")
-    test_df = _read_split(args.data_splits_folder, "test")
-    train_idx = train_df.index.tolist()
-    test_idx = test_df.index.tolist()
-
-    # load data
-    otu_df = pd.read_csv(args.path_to_features, sep="\t", index_col=0)
-    md_df = pd.read_csv(args.path_to_md, sep="\t", index_col=0)
-    # Convert absolute abundances to relative abundances
-    otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
-    print("md_df.shape", md_df.shape)
-    print("otu_df.shape", otu_df.shape)
-
-    # subset
-    X_train = otu_df.loc[train_idx]
-    y_train = md_df.loc[train_idx, args.target]
-    X_test = otu_df.loc[test_idx]
-    y_test = md_df.loc[test_idx, args.target]
+    X_train, y_train, X_test, y_test, _ = load_xy(
+        args.path_to_features,
+        args.path_to_md,
+        args.data_splits_folder,
+        args.target,
+        args.task,
+        enrich_with=args.enrich_with,
+    )
+    print(f"Enriched with {args.enrich_with}")
+    print("X_train.shape", X_train.shape)
+    print("X_test.shape", X_test.shape)
 
     if args.task == "classification":
-        y_train = y_train.astype(int)
-        y_test = y_test.astype(int)
         default_models = CLASSIFICATION_MODELS
         metric = roc_auc
         estimator_key = "classifier"
