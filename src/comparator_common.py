@@ -120,10 +120,17 @@ def load_xy(
 def write_metrics(
     out_dir: str, usecase: str, method: str, metrics: pd.DataFrame
 ) -> str:
-    """Write a metrics frame as ``<usecase>_<method>_metrics.csv``."""
+    """Write a metrics frame as ``<usecase>_<method>_metrics.csv``.
+
+    The shared evaluators in `src.eval_automl` label every row ``automl``;
+    relabel it with the arm's own name so the merged comparison table
+    distinguishes them.
+    """
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, f"{usecase}_{method}_metrics.csv")
-    out = metrics.reset_index(names="model")
+    out = metrics.copy()
+    out.index = [method] * len(out)
+    out = out.reset_index(names="model")
     out.to_csv(path, index=False)
     return path
 
