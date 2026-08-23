@@ -76,6 +76,7 @@ def _ensure_qza_converted(usecase: str) -> None:
 
 _DEFAULT_AUTOML_CPUS: int = 100
 _DEFAULT_AUTOML_MEM_PER_CPU_MB: int = 4096
+_AUTOML_ENV: str = "autosklearn"
 
 
 def submit_automl(
@@ -173,7 +174,11 @@ def submit_automl(
     out_log = logs_path / "logs" / f"{job_name}_out.txt"
     out_log.parent.mkdir(parents=True, exist_ok=True)
 
-    wrapped = " ".join(shlex.quote(c) for c in cmd)
+    # Pin the environment explicitly: a job launched from another env would
+    # otherwise inherit its python and fail on `import autosklearn`.
+    wrapped = " ".join(
+        shlex.quote(c) for c in ["mamba", "run", "-n", _AUTOML_ENV, *cmd]
+    )
     sbatch_cmd = [
         "sbatch",
         f"--job-name={job_name}",
