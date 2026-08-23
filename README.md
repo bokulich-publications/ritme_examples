@@ -4,6 +4,9 @@ This repos contains fully reproducible workflows to reproduce the use cases acco
 ## Setup
 Each use case has different dependencies - you can find the instructions to set up the necessary conda environments at the start of each notebook.
 
+## AutoML comparators
+The TPOT and mAML comparator arms run alongside the auto-sklearn baseline - see `comparators/README.md`.
+
 ## Contact
 
 In case of questions or comments feel free to raise an issue in this repository.
