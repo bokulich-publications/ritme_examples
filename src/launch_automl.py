@@ -176,9 +176,12 @@ def submit_automl(
 
     # Pin the environment explicitly: a job launched from another env would
     # otherwise inherit its python and fail on `import autosklearn`.
-    wrapped = " ".join(
-        shlex.quote(c) for c in ["mamba", "run", "-n", _AUTOML_ENV, *cmd]
-    )
+    # Raise the per-user process and file-descriptor caps first; auto-sklearn
+    # forks one worker per core plus a forkserver per ensemble iteration, and
+    # exhausting nproc surfaces as `EOFError: unexpected EOF` from the
+    # forkserver rather than as a clear resource error.
+    inner = " ".join(shlex.quote(c) for c in ["mamba", "run", "-n", _AUTOML_ENV, *cmd])
+    wrapped = f"ulimit -u 60000; ulimit -n 524288; {inner}"
     sbatch_cmd = [
         "sbatch",
         f"--job-name={job_name}",

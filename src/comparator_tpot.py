@@ -82,6 +82,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=f"Keep operators normally dropped for memory: {INFEASIBLE_OPERATORS}.",
     )
+    p.add_argument(
+        "--generations",
+        type=int,
+        default=None,
+        help="GP generations. Default None lets --total-time-s bind instead.",
+    )
     p.add_argument("--seed", type=int, default=12)
     p.add_argument("--n-jobs", type=int, default=1)
     p.add_argument("--max-eval-time-mins", type=int, default=30)
@@ -174,6 +180,11 @@ def main() -> None:
     Estimator = TPOTClassifier if args.task == "classification" else TPOTRegressor
     est = Estimator(
         config_dict=config,
+        # generations=None makes TPOT schedule 1e6 generations so max_time_mins
+        # is the binding stop condition. Left at its default of 100, TPOT ends
+        # the search once those generations are evaluated -- well inside the
+        # matched budget -- and the arms are no longer budget-comparable.
+        generations=args.generations,
         cv=make_cv(args.usecase, args.task, args.seed),
         scoring=(
             "roc_auc"
