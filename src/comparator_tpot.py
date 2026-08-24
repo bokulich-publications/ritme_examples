@@ -40,12 +40,19 @@ OPERATOR_PREFIXES = (
 # restore them.
 INFEASIBLE_OPERATORS = ("sklearn.preprocessing.PolynomialFeatures",)
 
-# Estimator matching each usecase's ritme winner, using the same substitutions
-# the auto-sklearn arm makes in use_cases/n5_generic_automl.ipynb.
+# Closest TPOT estimator to each usecase's ritme winner. Pick from TPOT's own
+# catalogue rather than reusing the auto-sklearn arm's substitutions: that arm
+# has no ElasticNet and had to stand `sgd` in for ritme's linreg, a handicap
+# TPOT does not share.
 ESTIMATOR_FOR_USECASE = {
-    "u1": "sklearn.ensemble.GradientBoostingRegressor",  # ritme xgb
-    "u2": "sklearn.linear_model.SGDRegressor",  # ritme linreg
-    "u3": "sklearn.ensemble.GradientBoostingClassifier",  # ritme xgb_class
+    # ritme xgb -> the same library, not sklearn's GradientBoosting
+    "u1": "xgboost.XGBRegressor",
+    # ritme linreg is StandardScaler + ElasticNet (static_trainables.py:195-207);
+    # ElasticNetCV is the direct analogue. NB it does not expose alpha - it picks
+    # it by internal CV over a 100-point path, so its alpha search is not reduced.
+    "u2": "sklearn.linear_model.ElasticNetCV",
+    # ritme xgb_class -> the same library
+    "u3": "xgboost.XGBClassifier",
 }
 
 N_FOLDS = 5
