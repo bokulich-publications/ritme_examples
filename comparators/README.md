@@ -75,6 +75,12 @@ each experiment `<usecase>_<method>`.
   expands p features to p(p+1)/2 — 63.7M columns for u3, 635M for u2. Classic
   TPOT applies no per-evaluation memory cap, so one such individual OOM-kills
   the job. Restore with `--allow-infeasible-operators`.
+- **`FeatureAgglomeration` never enters TPOT's search**, though it is listed in
+  the config. TPOT 0.12.2 parameterises it with `affinity=`, which scikit-learn
+  deprecated in 1.2 and removed in 1.4, so it cannot be constructed under the
+  pinned sklearn 1.5. It appears in 0 of ~35 000 evaluated pipelines across all
+  runs, and in 0 of 5 even when it is one of only two entries in the config.
+  TPOT's effective preprocessing set here is therefore **16 operators, not 18**.
 - **`fit_result` is excluded from u3's metadata enrichment**
   (`src/launch_automl.py:ENRICH_EXCLUDE`); it is a clinical screening readout
   for the predicted outcome. Archived ritme u3 results still include it, so the
