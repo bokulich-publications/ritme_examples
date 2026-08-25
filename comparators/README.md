@@ -36,11 +36,8 @@ Then use `use_cases/n6_comparator_automl.ipynb`, or directly:
 ```python
 from src.launch_comparators import submit_comparator
 
-for usecase in ("u1", "u3"):
+for usecase in ("u1", "u2", "u3"):
     submit_comparator(usecase, method="tpot", total_time_s=82800)
-# u2 needs a larger allocation: FeatureAgglomeration holds an O(p^2) distance
-# matrix, 5.1 GB per worker at its 35,651 features, so 50 workers need ~254 GB.
-submit_comparator("u2", method="tpot", total_time_s=82800, mem_per_cpu_mb=6144)
 submit_comparator("u3", method="maml", total_time_s=82800)
 ```
 
@@ -83,3 +80,18 @@ each experiment `<usecase>_<method>`.
   for the predicted outcome. Archived ritme u3 results still include it, so the
   u3 row is not matched until ritme is rerun without it.
 - Pre-enrichment auto-sklearn results are kept in `automl/archive_pre_enrichment/`.
+
+## Matched allocation
+
+Every arm gets 50 CPUs, 200 GB and an 82 800 s search budget on `EPYC_7742`,
+matching the ritme runs. Two protocol differences remain and should be stated
+wherever the numbers are reported:
+
+- TPOT caps each evaluation (`--max-eval-time-mins`, 20 min; 120 min for u1,
+  where a shorter cap crashed the job — see below). ritme has no per-trial cap.
+- mAML has no time budget at all: its grid is exhaustive (781 configurations)
+  and it terminates when complete. Report its measured wall-clock instead.
+
+TPOT's `stopit` timeout raises asynchronously and corrupted the heap when it
+landed inside XGBoost's C code, killing a 10.7 h u1 job with `double free or
+corruption`. u1 therefore runs with a cap generous enough to fire rarely.
