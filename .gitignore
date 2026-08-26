@@ -197,6 +197,8 @@ automl/*
 # comparator run outputs (TPOT / mAML)
 comparators/*
 !comparators/.gitkeep
+# site-specific cluster settings (SLURM account, node type) - never commit
+.cluster.json
 # any personal scratch files or folders
 x_*
 ~$*

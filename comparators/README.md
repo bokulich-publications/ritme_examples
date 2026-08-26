@@ -23,8 +23,11 @@ mamba run -n maml_bench pip install -e .
 
 ## Running
 
-From the repo root, in the `ritme_usecases` env. All jobs are SLURM jobs on
-`EPYC_7742` nodes, account `es_beere`.
+From the repo root, in the `ritme_usecases` env. Everything runs as SLURM jobs.
+The account and node type are site-specific: copy `.cluster.example.json` to
+`.cluster.json` (gitignored) and fill in your own, or set
+`RITME_SLURM_ACCOUNT` / `RITME_NODE_CONSTRAINT` in the environment. Leaving
+both unset omits the flags and uses the cluster's defaults.
 
 ```shell
 # once: the comparator envs run NumPy 1.x and cannot read NumPy 2.x pickles
@@ -89,8 +92,8 @@ each experiment `<usecase>_<method>`.
 
 ## Matched allocation
 
-Every arm gets 50 CPUs, 200 GB and an 82 800 s search budget on `EPYC_7742`,
-matching the ritme runs. Two protocol differences remain and should be stated
+Every arm gets 50 CPUs, 200 GB and an 82 800 s search budget on one pinned node
+type, matching the ritme runs. Two protocol differences remain and should be stated
 wherever the numbers are reported:
 
 - TPOT caps each evaluation (`--max-eval-time-mins`, 20 min; 120 min for u1,

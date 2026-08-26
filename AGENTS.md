@@ -53,6 +53,30 @@ When testing new functionality always do it in an activated conda environment ca
 - Imperative form, matching existing `git log` style.
 - AI attribution is mandatory: include `Co-Authored-By: <tool>` in commit trailers.
 
+### Never commit site-specific infrastructure
+This repository is public. Values that identify the institution's compute
+environment must never enter a tracked file — not in code, notebooks, docs,
+comments, or saved cell output:
+
+- SLURM account / share names (e.g. anything matching `es_*`)
+- node type constraints, partition names, hostnames
+- absolute cluster paths containing a real user, group or lab name
+- internal hostnames, proxies or IP addresses
+
+Read them at runtime instead, via `src/cluster_config.py`, which resolves
+`.cluster.json` (gitignored) or `RITME_*` environment variables and omits the
+corresponding sbatch flag when unset. Copy `.cluster.example.json` to
+`.cluster.json` for local use.
+
+Before every commit that touches launch code, notebooks or docs, verify:
+
+```shell
+git grep -n -I -E "es_[a-z]+|EPYC|/cluster/(project|home|scratch)/[a-z]"
+```
+
+Notebook **outputs** leak these too — a stack trace or warning pastes absolute
+env paths into the committed JSON. Check output cells, not just source.
+
 ### Writing style
 - When writing documentation (e.g. in README files) - make sure the text is concise and does not contain unnecessary legacy/context information that is not crucial for the comment being made.
 - Do not transplant conversational rationale into the document. If you justified a change in chat (e.g. "this works because tool X reads file Y..."), the file itself should still only state *what* the reader needs to do. If they want the rationale, upstream tool docs are the right place to send them.

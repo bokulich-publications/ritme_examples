@@ -17,6 +17,7 @@ from typing import Iterable, Optional
 
 import pandas as pd
 
+from src import cluster_config
 from src.launch_automl import (
     _ensure_qza_converted,
     _read_enrich_with,
@@ -28,8 +29,10 @@ METHOD_ENVS = {"tpot": "tpot_bench", "maml": "maml_bench"}
 
 _DEFAULT_CPUS = 50
 _DEFAULT_MEM_PER_CPU_MB = 4096
-_DEFAULT_SLURM_ACCOUNT = "es_beere"
-_DEFAULT_NODE_CONSTRAINT = "EPYC_7742"
+
+# Site-specific; read from .cluster.json / the environment, never hardcoded.
+# See src/cluster_config.py.
+_UNSET = object()
 
 
 def ensure_parquet_splits() -> list[Path]:
@@ -68,6 +71,7 @@ def _worker_cmd(
     restricted_model: Optional[str],
     unrestricted: bool,
     max_eval_time_mins: int,
+    checkpoint_dir: Optional[str] = None,
 ) -> list[str]:
     spec = USECASES[usecase]
     common = [
@@ -103,6 +107,8 @@ def _worker_cmd(
             "--max-eval-time-mins",
             str(max_eval_time_mins),
         ]
+        if checkpoint_dir:
+            common += ["--checkpoint-dir", str(checkpoint_dir)]
         if unrestricted:
             common.append("--unrestricted")
         elif restricted_model:
@@ -124,9 +130,10 @@ def submit_comparator(
     cpus: Optional[int] = None,
     mem_per_cpu_mb: Optional[int] = None,
     slurm_time: Optional[str] = None,
-    slurm_account: Optional[str] = _DEFAULT_SLURM_ACCOUNT,
-    node_constraint: Optional[str] = _DEFAULT_NODE_CONSTRAINT,
+    slurm_account: Optional[str] = _UNSET,  # type: ignore[assignment]
+    node_constraint: Optional[str] = _UNSET,  # type: ignore[assignment]
     max_eval_time_mins: int = 30,
+    checkpoint_dir: Optional[str] = None,
 ) -> subprocess.CompletedProcess | list[str]:
     """Submit (or run) one comparator arm for a use case.
 
@@ -144,6 +151,11 @@ def submit_comparator(
         raise ValueError(
             f"mAML is classification-only, but usecase {usecase!r} is {task!r}."
         )
+
+    if slurm_account is _UNSET:
+        slurm_account = cluster_config.slurm_account()
+    if node_constraint is _UNSET:
+        node_constraint = cluster_config.node_constraint()
 
     cpus = _DEFAULT_CPUS if cpus is None else cpus
     mem_per_cpu_mb = (
@@ -174,6 +186,7 @@ def submit_comparator(
         restricted_model,
         unrestricted,
         max_eval_time_mins,
+        checkpoint_dir,
     )
 
     if mode == "local":
