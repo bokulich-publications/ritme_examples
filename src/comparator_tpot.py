@@ -10,6 +10,8 @@ feature-model optimization.
 from __future__ import annotations
 
 import argparse
+import ast
+import glob
 import os
 
 import pandas as pd
@@ -99,7 +101,103 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--n-jobs", type=int, default=1)
     p.add_argument("--max-eval-time-mins", type=int, default=30)
     p.add_argument("--out-dir", default="comparators")
+    p.add_argument(
+        "--checkpoint-dir",
+        default=None,
+        help=(
+            "TPOT `periodic_checkpoint_folder`: writes each new pareto-front "
+            "pipeline as exportable source, once per generation. Affects "
+            "persistence only, not the search. Needed on u1, where TPOT's "
+            "stopit timeout can corrupt XGBoost's heap and kill the process."
+        ),
+    )
+    p.add_argument(
+        "--recover-from",
+        default=None,
+        help=(
+            "Skip the search: rebuild the best pipeline from this checkpoint "
+            "directory, fit it on train_val and evaluate on test."
+        ),
+    )
     return p.parse_args()
+
+
+# Names assigned by the data-loading preamble of a TPOT export, which cannot be
+# re-executed here (it reads a CSV placeholder path).
+_EXPORT_SKIP_TARGETS = frozenset(
+    {
+        "tpot_data",
+        "features",
+        "training_features",
+        "testing_features",
+        "training_target",
+        "testing_target",
+        "results",
+    }
+)
+
+
+def _keep_export_node(node: ast.stmt) -> bool:
+    """Whether a statement of a TPOT export is needed to rebuild the pipeline.
+
+    Keeps imports, the ``exported_pipeline`` assignment and the random_state
+    fix-up (which TPOT emits either as a bare ``set_param_recursive`` call or,
+    for a single-estimator pipeline, as an ``if hasattr(...)`` guard). Drops the
+    data-loading preamble and the fit/predict calls.
+    """
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        return True
+    if isinstance(node, ast.Assign):
+        names = set()
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                names.add(target.id)
+            elif isinstance(target, ast.Tuple):
+                names.update(e.id for e in target.elts if isinstance(e, ast.Name))
+        return not (names & _EXPORT_SKIP_TARGETS)
+    if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+        func = node.value.func
+        if isinstance(func, ast.Attribute) and func.attr in {"fit", "predict"}:
+            return False
+    return True
+
+
+def load_checkpoint_pipeline(checkpoint_dir: str):
+    """Rebuild the best pipeline from a `periodic_checkpoint_folder`.
+
+    TPOT writes exportable source per pareto-front pipeline, not a fitted
+    model, so the newest file is executed to recover `exported_pipeline` and
+    the CV score recorded in its header comment.
+    """
+    files = sorted(
+        glob.glob(os.path.join(checkpoint_dir, "pipeline_gen_*.py")),
+        key=os.path.getmtime,
+    )
+    if not files:
+        raise FileNotFoundError(f"No pipeline_gen_*.py in {checkpoint_dir}")
+    newest = files[-1]
+    source = open(newest).read()
+
+    score = None
+    for line in source.splitlines():
+        if line.startswith("# Average CV score"):
+            score = float(line.rsplit(":", 1)[1])
+            break
+
+    # The exported file also loads a CSV it cannot find and fits the pipeline;
+    # drop those statements and keep the imports, the pipeline definition and
+    # the random_state fix-up. Selecting on the AST rather than on text is what
+    # makes this safe: TPOT's train_test_split call is split over two lines with
+    # a backslash continuation, so line filtering leaves an orphaned indented
+    # fragment behind and the exec fails with IndentationError.
+    module = ast.Module(
+        body=[n for n in ast.parse(source).body if _keep_export_node(n)],
+        type_ignores=[],
+    )
+    namespace: dict = {}
+    exec(compile(module, newest, "exec"), namespace)  # noqa: S102 - TPOT-generated
+    print(f"Recovered {newest} (internal CV score {score})")
+    return namespace["exported_pipeline"], score, len(files), newest
 
 
 def default_config(task: str) -> dict:
@@ -153,6 +251,55 @@ def evaluated_individuals_frame(est) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _evaluate_and_write(
+    args,
+    model,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    *,
+    model_label: str,
+    configs: pd.DataFrame,
+    n_evaluated: int,
+    exporter=None,
+    recovered: bool = False,
+) -> None:
+    """Score a fitted pipeline and write the arm's four output files."""
+    if args.task == "classification":
+        metrics, fig = get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test)
+        fig_suffix = "roc"
+    else:
+        metrics, fig = get_metrics_n_scatterplot(
+            model, X_train, y_train, X_test, y_test
+        )
+        fig_suffix = "true_vs_pred"
+
+    metrics["slurm_job_id"] = os.environ.get("SLURM_JOB_ID")
+    metrics["restricted_model"] = model_label
+    metrics["n_configs_evaluated"] = n_evaluated
+    metrics["recovered_from_checkpoint"] = recovered
+
+    os.makedirs(args.out_dir, exist_ok=True)
+    metrics_path = write_metrics(args.out_dir, args.usecase, "tpot", metrics)
+    configs_path = write_configs(args.out_dir, args.usecase, "tpot", configs)
+    written = [("Metrics", metrics_path), ("Configs", configs_path)]
+
+    if exporter is not None:
+        pipeline_path = os.path.join(
+            args.out_dir, f"{args.usecase}_tpot_best_pipeline.py"
+        )
+        exporter(pipeline_path)
+        written.append(("Pipeline", pipeline_path))
+
+    fig_path = os.path.join(args.out_dir, f"{args.usecase}_tpot_best_{fig_suffix}.png")
+    fig.savefig(fig_path, bbox_inches="tight")
+    written.append(("Plot", fig_path))
+
+    for label, path in written:
+        print(f"{label} written to {path}")
+
+
 def main() -> None:
     args = parse_args()
     spec = USECASES[args.usecase]
@@ -169,6 +316,26 @@ def main() -> None:
     print(f"Enriched with {args.enrich_with}")
     print("X_train.shape", X_train.shape)
     print("X_test.shape", X_test.shape)
+
+    if args.recover_from:
+        model, cv_score, n_checkpoints, newest = load_checkpoint_pipeline(
+            args.recover_from
+        )
+        model.fit(X_train, y_train)
+        _evaluate_and_write(
+            args,
+            model,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            model_label=args.restricted_model
+            or ESTIMATOR_FOR_USECASE.get(args.usecase, ""),
+            configs=pd.DataFrame([{"pipeline": newest, "internal_cv_score": cv_score}]),
+            n_evaluated=n_checkpoints,
+            recovered=True,
+        )
+        return
 
     if args.unrestricted:
         config = drop_infeasible(
@@ -204,6 +371,7 @@ def main() -> None:
         random_state=args.seed,
         disable_update_check=True,
         verbosity=2,
+        periodic_checkpoint_folder=args.checkpoint_dir,
     )
     est.fit(X_train, y_train, groups=groups)
     print(f"Evaluated {len(est.evaluated_individuals_)} pipelines")
@@ -211,37 +379,18 @@ def main() -> None:
 
     # The fitted sklearn pipeline, not the TPOT wrapper: it carries `classes_`
     # and a plain predict_proba, which the shared evaluators expect.
-    model = est.fitted_pipeline_
-    if args.task == "classification":
-        metrics, fig = get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test)
-        fig_suffix = "roc"
-    else:
-        metrics, fig = get_metrics_n_scatterplot(
-            model, X_train, y_train, X_test, y_test
-        )
-        fig_suffix = "true_vs_pred"
-
-    metrics["slurm_job_id"] = os.environ.get("SLURM_JOB_ID")
-    metrics["restricted_model"] = model_label
-    metrics["n_configs_evaluated"] = len(est.evaluated_individuals_)
-
-    os.makedirs(args.out_dir, exist_ok=True)
-    metrics_path = write_metrics(args.out_dir, args.usecase, "tpot", metrics)
-    configs_path = write_configs(
-        args.out_dir, args.usecase, "tpot", evaluated_individuals_frame(est)
+    _evaluate_and_write(
+        args,
+        est.fitted_pipeline_,
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        model_label=model_label,
+        configs=evaluated_individuals_frame(est),
+        n_evaluated=len(est.evaluated_individuals_),
+        exporter=est.export,
     )
-    pipeline_path = os.path.join(args.out_dir, f"{args.usecase}_tpot_best_pipeline.py")
-    est.export(pipeline_path)
-    fig_path = os.path.join(args.out_dir, f"{args.usecase}_tpot_best_{fig_suffix}.png")
-    fig.savefig(fig_path, bbox_inches="tight")
-
-    for label, path in [
-        ("Metrics", metrics_path),
-        ("Configs", configs_path),
-        ("Pipeline", pipeline_path),
-        ("Plot", fig_path),
-    ]:
-        print(f"{label} written to {path}")
 
 
 if __name__ == "__main__":
