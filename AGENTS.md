@@ -60,7 +60,8 @@ comments, or saved cell output:
 
 - SLURM account / share names (e.g. anything matching `es_*`)
 - node type constraints, partition names, hostnames
-- absolute cluster paths containing a real user, group or lab name
+- absolute paths containing a real user, group or lab name — cluster
+  (`/cluster/project/...`), Linux (`/home/...`) and macOS (`/Users/...`) alike
 - internal hostnames, proxies or IP addresses
 
 Read them at runtime instead, via `src/cluster_config.py`, which resolves
@@ -71,11 +72,21 @@ corresponding sbatch flag when unset. Copy `.cluster.example.json` to
 Before every commit that touches launch code, notebooks or docs, verify:
 
 ```shell
-git grep -n -I -E "es_[a-z]+|EPYC|/cluster/(project|home|scratch)/[a-z]"
+git grep -n -I -E "\bes_[a-z]+\b|EPYC|/cluster/(project|home|scratch)/[a-z]|/Users/[a-z]|/home/[a-z]"
 ```
 
+The `\b` around the account pattern is load-bearing: without it, `es_` matches
+inside ordinary identifiers (`min_samples_split`, `classes_arr`, `matches`) and
+buries the real hits in dozens of false positives.
+
 Notebook **outputs** leak these too — a stack trace or warning pastes absolute
-env paths into the committed JSON. Check output cells, not just source.
+env paths into the committed JSON. Check output cells, not just source, and
+match every platform: a notebook run on a laptop leaks `/Users/<name>/...`,
+one run on the cluster leaks `/cluster/project/<lab>/<user>/...`.
+
+A gitignore pattern does **not** protect an already-tracked file: `use_cases/
+archive/` is ignored, yet the notebooks committed before that rule still had to
+be scrubbed by hand.
 
 ### Writing style
 - When writing documentation (e.g. in README files) - make sure the text is concise and does not contain unnecessary legacy/context information that is not crucial for the comment being made.
