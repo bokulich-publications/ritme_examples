@@ -13,6 +13,7 @@ import argparse
 import ast
 import glob
 import os
+from typing import Optional
 
 import pandas as pd
 from sklearn.model_selection import GroupKFold, KFold, StratifiedKFold
@@ -162,27 +163,39 @@ def _keep_export_node(node: ast.stmt) -> bool:
     return True
 
 
+def _checkpoint_score(path: str) -> Optional[float]:
+    """Internal CV score recorded in a TPOT export header, if present."""
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith("# Average CV score"):
+                try:
+                    return float(line.rsplit(":", 1)[1])
+                except ValueError:
+                    return None
+    return None
+
+
 def load_checkpoint_pipeline(checkpoint_dir: str):
-    """Rebuild the best pipeline from a `periodic_checkpoint_folder`.
+    """Rebuild the best-scoring pipeline from a `periodic_checkpoint_folder`.
 
     TPOT writes exportable source per pareto-front pipeline, not a fitted
-    model, so the newest file is executed to recover `exported_pipeline` and
-    the CV score recorded in its header comment.
+    model. The front trades accuracy against pipeline complexity, so the most
+    recent file is frequently a longer, worse-scoring member -- selection is on
+    the recorded CV score (higher is better for every TPOT scorer), falling
+    back to file age only when no header carries one.
     """
-    files = sorted(
-        glob.glob(os.path.join(checkpoint_dir, "pipeline_gen_*.py")),
-        key=os.path.getmtime,
-    )
+    files = glob.glob(os.path.join(checkpoint_dir, "pipeline_gen_*.py"))
     if not files:
         raise FileNotFoundError(f"No pipeline_gen_*.py in {checkpoint_dir}")
-    newest = files[-1]
-    source = open(newest).read()
 
-    score = None
-    for line in source.splitlines():
-        if line.startswith("# Average CV score"):
-            score = float(line.rsplit(":", 1)[1])
-            break
+    scored = [(f, _checkpoint_score(f)) for f in files]
+    with_score = [(f, s) for f, s in scored if s is not None]
+    if with_score:
+        newest, score = max(with_score, key=lambda fs: fs[1])
+    else:
+        newest = max(files, key=os.path.getmtime)
+        score = None
+    source = open(newest).read()
 
     # The exported file also loads a CSV it cannot find and fits the pipeline;
     # drop those statements and keep the imports, the pipeline definition and
