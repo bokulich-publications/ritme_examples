@@ -125,30 +125,50 @@ def parse_args() -> argparse.Namespace:
         "--recover-log",
         default=None,
         help=(
-            "Job log of the crashed run. Its tqdm progress line carries the "
-            "true evaluated-pipeline count, which the checkpoint files do not."
+            "Job log of the crashed run. Its tqdm progress line gives an "
+            "upper bound on pipelines evaluated (it counts GP re-proposals, "
+            "which evaluated_individuals_ deduplicates)."
         ),
     )
     return p.parse_args()
 
 
-def evaluated_count_from_log(log_path: str) -> Optional[int]:
-    """Pipelines evaluated, read from TPOT's progress bar in a job log.
+def attempted_count_from_log(log_path: str) -> Optional[int]:
+    """Pipelines *attempted*, read from TPOT's progress bar in a job log.
 
-    A crash destroys `evaluated_individuals_`, and the checkpoint files only
-    hold the pareto front (tens of entries), so neither gives the evaluated
-    count. TPOT's tqdm line does: `Optimization Progress: 98%|...| 6303/6400`.
+    An upper bound on `len(evaluated_individuals_)`, not the same quantity:
+    the bar counts every individual the GP proposes, while the dict is keyed
+    by pipeline string and deduplicates re-proposals. Measured inflation on
+    clean runs here was +2.0% (u3: 11001 vs 10781) and +26.5% (u2: 5126 vs
+    4052), so no fixed correction factor applies. Use only when a crash has
+    destroyed the dict, and label the result as a bound.
+
+    tqdm emits two forms and switches to the second once the counter passes
+    the initial total, so both must be matched:
+
+        Optimization Progress:  98%|####| 6303/6400 [...]
+        Optimization Progress: 6401pipeline [...]
+
+    Counters restart per run and job logs are opened in append mode, so only
+    the trailing run's segment is considered.
     """
-    pattern = re.compile(r"Optimization Progress:[^|]*\|[^|]*\|\s*(\d+)/\d+")
-    last = None
+    fraction = re.compile(r"Optimization Progress:[^|]*\|[^|]*\|\s*(\d+)/\d+")
+    bare = re.compile(r"Optimization Progress:\s*(\d+)pipeline")
+    counts: list[int] = []
     try:
         with open(log_path, errors="replace") as fh:
             for line in fh:
-                for match in pattern.finditer(line):
-                    last = int(match.group(1))
+                for pattern in (fraction, bare):
+                    counts.extend(int(m.group(1)) for m in pattern.finditer(line))
     except OSError:
         return None
-    return last
+    if not counts:
+        return None
+    start_idx = 0
+    for i in range(1, len(counts)):
+        if counts[i] < counts[i - 1]:
+            start_idx = i
+    return max(counts[start_idx:])
 
 
 # Names assigned by the data-loading preamble of a TPOT export, which cannot be
@@ -306,6 +326,7 @@ def _evaluate_and_write(
     exporter=None,
     recovered: bool = False,
     n_checkpoints: Optional[int] = None,
+    n_attempted_log: Optional[int] = None,
 ) -> None:
     """Score a fitted pipeline and write the arm's four output files."""
     if args.task == "classification":
@@ -323,6 +344,8 @@ def _evaluate_and_write(
     metrics["recovered_from_checkpoint"] = recovered
     if n_checkpoints is not None:
         metrics["n_checkpoints"] = n_checkpoints
+    if n_attempted_log is not None:
+        metrics["n_configs_attempted_log_upper_bound"] = n_attempted_log
 
     os.makedirs(args.out_dir, exist_ok=True)
     metrics_path = write_metrics(args.out_dir, args.usecase, "tpot", metrics)
@@ -376,8 +399,11 @@ def main() -> None:
             model_label=args.restricted_model
             or ESTIMATOR_FOR_USECASE.get(args.usecase, ""),
             configs=pd.DataFrame([{"pipeline": newest, "internal_cv_score": cv_score}]),
-            n_evaluated=(
-                evaluated_count_from_log(args.recover_log) if args.recover_log else None
+            # Unknown after a crash: the dict is destroyed and the log only
+            # bounds it from above.
+            n_evaluated=None,
+            n_attempted_log=(
+                attempted_count_from_log(args.recover_log) if args.recover_log else None
             ),
             n_checkpoints=n_checkpoints,
             recovered=True,
