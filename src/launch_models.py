@@ -6,6 +6,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -349,9 +350,34 @@ def _resolve_config_for_run(
     return resolved
 
 
+def _pin_launcher_env(env: dict) -> None:
+    """Pin the launching interpreter's environment for the submitted job.
+
+    ``run_ritme_model.sh`` activates no environment, and ``sbatch
+    --export=ALL`` forwards the caller's ``PATH``, so a job runs whatever
+    ``ritme`` the *launching shell* resolves. Submitted from a shell without
+    the ritme env active that is silently a different interpreter -- the job
+    dies seconds in, or worse, runs against the wrong dependencies.
+
+    Putting the launching interpreter's ``bin`` first makes the job use the
+    environment the submission was made from, and a missing ``ritme`` beside
+    it becomes a hard error rather than a late, confusing one.
+    """
+    bin_dir = Path(sys.executable).resolve().parent
+    if not (bin_dir / "ritme").exists():
+        raise RuntimeError(
+            f"No 'ritme' executable beside the launching interpreter "
+            f"({bin_dir}). Submit from the ritme environment, e.g. "
+            f"`mamba run -n ritme_usecases python -m ...`; otherwise the job "
+            f"inherits PATH and would silently run a different ritme."
+        )
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
+
+
 def _build_env(usecase: str, config_path: Path, logs_dir: Path) -> dict:
     spec = USECASES[usecase]
     env = os.environ.copy()
+    _pin_launcher_env(env)
     env["CONFIG"] = str(config_path)
     env["PATH_MD"] = str(REPO_ROOT / spec["path_md"])
     env["PATH_FT"] = str(REPO_ROOT / spec["path_ft"])
