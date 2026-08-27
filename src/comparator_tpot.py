@@ -13,6 +13,7 @@ import argparse
 import ast
 import glob
 import os
+import re
 from typing import Optional
 
 import pandas as pd
@@ -120,7 +121,34 @@ def parse_args() -> argparse.Namespace:
             "directory, fit it on train_val and evaluate on test."
         ),
     )
+    p.add_argument(
+        "--recover-log",
+        default=None,
+        help=(
+            "Job log of the crashed run. Its tqdm progress line carries the "
+            "true evaluated-pipeline count, which the checkpoint files do not."
+        ),
+    )
     return p.parse_args()
+
+
+def evaluated_count_from_log(log_path: str) -> Optional[int]:
+    """Pipelines evaluated, read from TPOT's progress bar in a job log.
+
+    A crash destroys `evaluated_individuals_`, and the checkpoint files only
+    hold the pareto front (tens of entries), so neither gives the evaluated
+    count. TPOT's tqdm line does: `Optimization Progress: 98%|...| 6303/6400`.
+    """
+    pattern = re.compile(r"Optimization Progress:[^|]*\|[^|]*\|\s*(\d+)/\d+")
+    last = None
+    try:
+        with open(log_path, errors="replace") as fh:
+            for line in fh:
+                for match in pattern.finditer(line):
+                    last = int(match.group(1))
+    except OSError:
+        return None
+    return last
 
 
 # Names assigned by the data-loading preamble of a TPOT export, which cannot be
@@ -274,9 +302,10 @@ def _evaluate_and_write(
     *,
     model_label: str,
     configs: pd.DataFrame,
-    n_evaluated: int,
+    n_evaluated: Optional[int],
     exporter=None,
     recovered: bool = False,
+    n_checkpoints: Optional[int] = None,
 ) -> None:
     """Score a fitted pipeline and write the arm's four output files."""
     if args.task == "classification":
@@ -292,6 +321,8 @@ def _evaluate_and_write(
     metrics["restricted_model"] = model_label
     metrics["n_configs_evaluated"] = n_evaluated
     metrics["recovered_from_checkpoint"] = recovered
+    if n_checkpoints is not None:
+        metrics["n_checkpoints"] = n_checkpoints
 
     os.makedirs(args.out_dir, exist_ok=True)
     metrics_path = write_metrics(args.out_dir, args.usecase, "tpot", metrics)
@@ -345,7 +376,10 @@ def main() -> None:
             model_label=args.restricted_model
             or ESTIMATOR_FOR_USECASE.get(args.usecase, ""),
             configs=pd.DataFrame([{"pipeline": newest, "internal_cv_score": cv_score}]),
-            n_evaluated=n_checkpoints,
+            n_evaluated=(
+                evaluated_count_from_log(args.recover_log) if args.recover_log else None
+            ),
+            n_checkpoints=n_checkpoints,
             recovered=True,
         )
         return
