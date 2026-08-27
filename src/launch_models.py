@@ -371,6 +371,20 @@ def _pin_launcher_env(env: dict) -> None:
             f"`mamba run -n ritme_usecases python -m ...`; otherwise the job "
             f"inherits PATH and would silently run a different ritme."
         )
+    # Presence is not health: a stale environment can carry a complete ritme
+    # stack whose scipy is broken, which passes the check above and then fails
+    # seconds into the job. Import the dependencies that fail cheaply in that
+    # state, in the very interpreter the job will inherit (~3 s).
+    try:
+        import ray  # noqa: F401
+        import scipy.stats  # noqa: F401
+    except Exception as exc:
+        raise RuntimeError(
+            f"{sys.executable} has a 'ritme' executable but cannot import "
+            f"ritme's dependencies ({type(exc).__name__}: {exc}). The "
+            f"environment is broken or stale; submit from a working ritme "
+            f"environment instead."
+        ) from exc
     env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
 
 
