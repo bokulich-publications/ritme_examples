@@ -652,8 +652,17 @@ def submit_model(
     mem_per_cpu_mb: Optional[int] = None,
     max_concurrent_trials: Optional[int] = None,
     config_overrides: Optional[dict] = None,
+    template: Optional[str | os.PathLike] = None,
 ) -> subprocess.CompletedProcess:
-    """Submit (or run locally) a single ritme experiment."""
+    """Submit (or run locally) a single ritme experiment.
+
+    ``template`` replaces the default end-to-end run script
+    (``src/run_ritme_model.sh``) with an alternative one driven by the same
+    env vars, e.g. the search-only template used by ``benchmarking/``.
+    """
+    template_path = TEMPLATE if template is None else Path(template)
+    if not template_path.exists():
+        raise FileNotFoundError(f"Run template not found: {template_path}")
     logs_path = _resolve_logs_path(logs_dir)
     config_path = _resolve_config_for_run(
         usecase,
@@ -670,7 +679,7 @@ def submit_model(
         slurm_time = _default_slurm_time(resolved_cfg["time_budget_s"])
 
     return _launch(
-        TEMPLATE,
+        template_path,
         env,
         mode=mode,
         usecase=usecase,

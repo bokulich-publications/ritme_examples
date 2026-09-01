@@ -28,6 +28,12 @@ The SLURM account and node type are site-specific: copy `.cluster.example.json`
 to `.cluster.json` (gitignored), or set `RITME_SLURM_ACCOUNT` /
 `RITME_NODE_CONSTRAINT`. Leaving both unset uses the cluster's defaults.
 
+## Benchmarks
+
+The computational-efficiency benchmarks of the manuscript (search efficiency,
+resource scaling and the resource cost of the auto-sklearn comparison) live in
+`benchmarking/` - see `benchmarking/README.md`.
+
 ## Contact
 
 In case of questions or comments feel free to raise an issue in this repository.
