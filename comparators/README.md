@@ -81,9 +81,8 @@ each experiment `<usecase>_<method>`.
 - **`FeatureAgglomeration` never enters TPOT's search**, though it is listed in
   the config. TPOT 0.12.2 parameterises it with `affinity=`, which scikit-learn
   deprecated in 1.2 and removed in 1.4, so it cannot be constructed under the
-  pinned sklearn 1.5. It appears in 0 of ~35 000 evaluated pipelines across all
-  runs, and in 0 of 5 even when it is one of only two entries in the config.
-  TPOT's effective preprocessing set here is therefore **16 operators, not 18**.
+  pinned sklearn 1.5. TPOT's effective preprocessing set here is therefore
+  **16 operators, not 18**.
 - **`fit_result` is excluded from u3's metadata enrichment**
   (`src/launch_automl.py:ENRICH_EXCLUDE`); it is a clinical screening readout
   for the predicted outcome. Archived ritme u3 results still include it, so the
@@ -96,11 +95,12 @@ Every arm gets 50 CPUs, 200 GB and an 82 800 s search budget on one pinned node
 type, matching the ritme runs. Two protocol differences remain and should be stated
 wherever the numbers are reported:
 
-- TPOT caps each evaluation (`--max-eval-time-mins`, 20 min; 120 min for u1,
-  where a shorter cap crashed the job — see below). ritme has no per-trial cap.
+- TPOT caps each evaluation (`--max-eval-time-mins`, 20 min; 120 min for u1).
+  ritme has no per-trial cap.
 - mAML has no time budget at all: its grid is exhaustive (781 configurations)
   and it terminates when complete. Report its measured wall-clock instead.
 
-TPOT's `stopit` timeout raises asynchronously and corrupted the heap when it
-landed inside XGBoost's C code, killing a 10.7 h u1 job with `double free or
-corruption`. u1 therefore runs with a cap generous enough to fire rarely.
+u1 needs a cap large enough to fire rarely: TPOT's `stopit` timeout raises
+asynchronously and can corrupt XGBoost's heap when it lands in native code,
+ending the run. Set `--checkpoint-dir` so a crash is recoverable via
+`--recover-from`.
