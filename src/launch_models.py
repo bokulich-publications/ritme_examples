@@ -121,6 +121,26 @@ USECASES: dict[str, dict] = {
         "n_prev": None,
         "qza_inputs": [],
     },
+    "u4": {
+        "config_prefix": "u4",
+        "use_case_dir": "use_cases/u4_amplicon_emp_classification",
+        "data_splits": "use_cases/u4_amplicon_emp_classification/data_splits_u4",
+        "path_md": "data/u4_emp/md_emp.tsv",
+        # not read: the splits are pre-staged, so the split step is skipped
+        "path_ft": "data/u4_emp/emp_deblur_90bp.qc_filtered.biom",
+        "path_tax": "data/u4_emp/taxonomy_emp.tsv",
+        "path_phylo": None,
+        "group_by_column": None,
+        # CV stratification is set in the config JSON (`stratify_by`), which is
+        # what `find_best_model_config` reads; this entry only feeds the split
+        # step, which u4 skips.
+        "stratify_by": None,
+        "task": "classification",
+        "time_col": None,
+        "host_col": None,
+        "n_prev": None,
+        "qza_inputs": [],
+    },
 }
 
 SLURM_RESOURCES: dict[tuple[str, str], dict] = {
@@ -271,6 +291,32 @@ SLURM_RESOURCES: dict[tuple[str, str], dict] = {
     ("u3", "nn_class"): {
         "cpus": 50,
         "mem_per_cpu_mb": 3072,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u4", "logreg"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 10240,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u4", "rf_class"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 10240,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u4", "xgb_class"): {
+        # 8 concurrent trials at full width hit 524 GB and had Ray actors
+        # OOM-killed; XGBoost's quantised DMatrix copies dominate.
+        "cpus": 50,
+        "mem_per_cpu_mb": 20480,
+        "gpus": 0,
+        "slurm_account": None,
+    },
+    ("u4", "nn_class"): {
+        "cpus": 50,
+        "mem_per_cpu_mb": 10240,
         "gpus": 0,
         "slurm_account": None,
     },

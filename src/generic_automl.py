@@ -5,12 +5,17 @@ import os
 import subprocess
 from pprint import pprint
 
+from functools import partial
+
 import autosklearn.classification
 import autosklearn.regression
 import pandas as pd
 from autosklearn.ensembles import SingleBest
-from autosklearn.metrics import roc_auc, root_mean_squared_error
+from autosklearn.metrics import make_scorer, roc_auc, root_mean_squared_error
 
+from sklearn.metrics import roc_auc_score as sk_roc_auc_score
+
+from src.comparator_common import encode_labels
 from src.eval_automl import (
     get_metrics_n_roc_curve,
     get_metrics_n_scatterplot,
@@ -58,10 +63,46 @@ def parse_args():
         action="store_true",
         help=("If set, restrict Auto-Sklearn to single best model - no ensembles."),
     )
+    p.add_argument(
+        "--n-jobs",
+        type=int,
+        default=-1,
+        help="auto-sklearn worker processes; cap on wide tables (memory).",
+    )
+    p.add_argument(
+        "--memory-limit-mb",
+        type=int,
+        default=24000,
+        help="auto-sklearn per-worker memory limit (MB).",
+    )
+    p.add_argument(
+        "--keep-tmp-folder",
+        default=None,
+        help="Directory for auto-sklearn's SMAC output, kept after the run "
+        "(default: a temp dir SLURM deletes). Set it on shared storage so "
+        "per-run failure statuses survive for post-mortems.",
+    )
     return p.parse_args()
 
 
 _CONVERTER_ENV = "ritme_usecases"
+
+
+def _read_wide_parquet(path: str) -> pd.DataFrame:
+    """Read a parquet file whose schema exceeds pyarrow's default thrift limits.
+
+    A 3x10^5-column table (u4) overflows the default metadata size caps at
+    read time; raising them is the documented remedy and a no-op for narrow
+    tables.
+    """
+    import pyarrow.parquet as pq
+
+    table = pq.ParquetFile(
+        path,
+        thrift_string_size_limit=1_000_000_000,
+        thrift_container_size_limit=1_000_000_000,
+    ).read()
+    return table.to_pandas()
 
 
 def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
@@ -88,7 +129,7 @@ def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
     parquet_path = os.path.join(data_splits_folder, f"{name}.parquet")
     pkl_path = os.path.join(data_splits_folder, f"{name}.pkl")
     if os.path.exists(parquet_path):
-        return pd.read_parquet(parquet_path)
+        return _read_wide_parquet(parquet_path)
     try:
         return pd.read_pickle(pkl_path)
     except (ModuleNotFoundError, ImportError):
@@ -108,7 +149,7 @@ def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
             ["mamba", "run", "-n", _CONVERTER_ENV, "python", "-c", convert_code],
             check=True,
         )
-        return pd.read_parquet(parquet_path)
+        return _read_wide_parquet(parquet_path)
 
 
 def main():
@@ -121,24 +162,38 @@ def main():
     test_idx = test_df.index.tolist()
 
     # load data
-    otu_df = pd.read_csv(args.path_to_features, sep="\t", index_col=0)
     md_df = pd.read_csv(args.path_to_md, sep="\t", index_col=0)
-    # Convert absolute abundances to relative abundances
-    otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
+    if args.path_to_features.endswith(".biom"):
+        # u4: the pre-staged split frames already hold the features as
+        # F-prefixed relative abundances; the BIOM is never read here.
+        feature_cols = [c for c in train_df.columns if c.startswith("F")]
+        X_train = train_df[feature_cols]
+        X_test = test_df[feature_cols]
+    else:
+        otu_df = pd.read_csv(args.path_to_features, sep="\t", index_col=0)
+        # Convert absolute abundances to relative abundances
+        otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
+        X_train = otu_df.loc[train_idx]
+        X_test = otu_df.loc[test_idx]
     print("md_df.shape", md_df.shape)
-    print("otu_df.shape", otu_df.shape)
+    print("X_train.shape", X_train.shape)
 
-    # subset
-    X_train = otu_df.loc[train_idx]
     y_train = md_df.loc[train_idx, args.target]
-    X_test = otu_df.loc[test_idx]
     y_test = md_df.loc[test_idx, args.target]
 
     if args.task == "classification":
-        y_train = y_train.astype(int)
-        y_test = y_test.astype(int)
+        y_train, y_test = encode_labels(y_train, y_test)
         default_models = CLASSIFICATION_MODELS
-        metric = roc_auc
+        if y_train.nunique() <= 2:
+            metric = roc_auc
+        else:
+            # auto-sklearn's roc_auc is binary-only; mirror ritme's
+            # macro-OvR objective for multi-class targets.
+            metric = make_scorer(
+                "roc_auc_macro_ovr",
+                partial(sk_roc_auc_score, multi_class="ovr", average="macro"),
+                needs_proba=True,
+            )
         estimator_key = "classifier"
         Estimator = autosklearn.classification.AutoSklearnClassifier
     else:
@@ -149,10 +204,15 @@ def main():
 
     common_kwargs = dict(
         time_left_for_this_task=args.total_time_s,
-        n_jobs=-1,
+        # every worker holds its own copy of the data; on wide tables the
+        # worker count, not the core count, bounds memory
+        n_jobs=args.n_jobs,
         metric=metric,
-        memory_limit=24000,
+        memory_limit=args.memory_limit_mb,
     )
+    if args.keep_tmp_folder:
+        common_kwargs["tmp_folder"] = args.keep_tmp_folder
+        common_kwargs["delete_tmp_folder_after_terminate"] = False
     if args.single_best:
         print("No ensembles - only single best model.")
         common_kwargs["ensemble_class"] = SingleBest
@@ -169,6 +229,13 @@ def main():
     automl = Estimator(include={estimator_key: list(models)}, **common_kwargs)
 
     automl.fit(X_train, y_train)
+    try:
+        stats = pd.Series(
+            [str(v.status) for v in automl.automl_.runhistory_.data.values()]
+        ).value_counts()
+        print("SMAC run statuses:\n", stats.to_string())
+    except Exception as e:  # diagnostic only; never fail the run on it
+        print(f"(could not summarise run statuses: {e})")
     print("Print model leaderboard:")
     print(automl.leaderboard())
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from pathlib import Path
 from typing import Iterable
 
@@ -33,7 +34,10 @@ import pandas as pd
 from scipy.stats import pearsonr
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     f1_score,
+    log_loss,
+    matthews_corrcoef,
     precision_score,
     r2_score,
     recall_score,
@@ -236,6 +240,108 @@ def bootstrap_classification_metrics(
     return pd.DataFrame(rows)
 
 
+MULTICLASS_METRICS = [
+    "accuracy_test",
+    "f1_macro_test",
+    "roc_auc_macro_ovr_test",
+    "log_loss_test",
+    "balanced_accuracy_test",
+    "mcc_test",
+]
+
+
+def _multiclass_metrics_row(
+    y_true: np.ndarray, y_proba: np.ndarray, classes: np.ndarray, present: np.ndarray
+) -> dict[str, float]:
+    """ritme's classification metric set plus accuracy, over a fixed class set.
+
+    ``present`` is held fixed across bootstrap resamples so every resample
+    estimates the same quantity; a resample that loses one of those classes
+    makes its one-vs-rest AUROC undefined and yields ``nan``, which the caller
+    excludes.
+    """
+    y_pred = classes[y_proba.argmax(axis=1)]
+    keep = np.isin(classes, present)
+    proba = y_proba[:, keep]
+    mass = proba.sum(axis=1, keepdims=True)
+    proba = proba / np.where(mass > 0, mass, 1.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        auc = roc_auc_score(
+            y_true, proba, multi_class="ovr", average="macro", labels=present
+        )
+        f1_macro = f1_score(y_true, y_pred, average="macro", zero_division=0)
+    return {
+        "accuracy_test": float(accuracy_score(y_true, y_pred)),
+        "f1_macro_test": float(f1_macro),
+        "roc_auc_macro_ovr_test": float(auc),
+        "log_loss_test": float(log_loss(y_true, proba, labels=present)),
+        "balanced_accuracy_test": float(balanced_accuracy_score(y_true, y_pred)),
+        "mcc_test": float(matthews_corrcoef(y_true, y_pred)),
+    }
+
+
+def bootstrap_multiclass_metrics(
+    y_true: Iterable,
+    y_proba: np.ndarray,
+    classes: Iterable,
+    n_resamples: int = 1000,
+    ci: float = 0.95,
+    seed: int = 12,
+) -> pd.DataFrame:
+    """Return point + bootstrap-CI per metric for a multi-class classifier.
+
+    Same column schema as the binary sibling. The class set is frozen to the
+    classes present in the full ``y_true``; resamples in which one of them
+    disappears are excluded from the AUROC percentiles, so that metric's
+    ``n_resamples`` can be lower than requested -- inspect that column.
+    """
+    y_true = np.asarray(y_true)
+    y_proba = np.asarray(y_proba, dtype=float)
+    classes = np.asarray(list(classes))
+    if y_proba.ndim != 2 or y_proba.shape != (y_true.shape[0], classes.shape[0]):
+        raise ValueError(
+            f"y_proba must be (n_samples, n_classes); got {y_proba.shape} for "
+            f"{y_true.shape[0]} samples and {classes.shape[0]} classes."
+        )
+    if np.isnan(y_proba).any():
+        raise ValueError("y_proba contains NaN; refusing to bootstrap.")
+    seen = set(y_true.tolist())
+    present = np.array([c for c in classes if c in seen])
+    if present.size < 2:
+        raise ValueError(f"Need at least 2 classes in y_true; got {present.tolist()}.")
+
+    point = _multiclass_metrics_row(y_true, y_proba, classes, present)
+    samples: dict[str, list[float]] = {name: [] for name in MULTICLASS_METRICS}
+    rng = np.random.default_rng(seed)
+    n = y_true.shape[0]
+    for _ in range(n_resamples):
+        idx = rng.integers(0, n, size=n)
+        row = _multiclass_metrics_row(y_true[idx], y_proba[idx], classes, present)
+        for name in MULTICLASS_METRICS:
+            samples[name].append(row[name])
+
+    alpha = (1.0 - ci) / 2.0
+    rows = []
+    for name in MULTICLASS_METRICS:
+        arr = np.asarray(samples[name], dtype=float)
+        arr = arr[np.isfinite(arr)]
+        rows.append(
+            {
+                "metric": name,
+                "point": point[name],
+                "mean": float(arr.mean()) if arr.size else float("nan"),
+                "ci_low": float(np.quantile(arr, alpha)) if arr.size else float("nan"),
+                "ci_high": (
+                    float(np.quantile(arr, 1 - alpha)) if arr.size else float("nan")
+                ),
+                "n_resamples": int(arr.size),
+                "ci_pct": ci,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _positive_class_proba(
     proba: np.ndarray, classes: list, target_dtype: np.dtype
 ) -> np.ndarray:
@@ -277,8 +383,16 @@ def _bootstrap_ritme_experiment(
     test = pd.read_pickle(splits_dir / "test.pkl")
     tmodel = load_best_model(model_type, str(experiment_dir))
 
-    if model_type in CLASSIFICATION_MODELS:
+    if cfg.get("task_type", "regression") == "classification":
         proba, classes = tmodel.predict_proba(test, "test")
+        if len(classes) > 2:
+            return bootstrap_multiclass_metrics(
+                test[target].to_numpy(),
+                proba,
+                classes,
+                n_resamples=n_resamples,
+                seed=seed,
+            )
         y_true = test[target].astype(int).to_numpy()
         y_proba = _positive_class_proba(proba, classes, test[target].dtype)
         return bootstrap_classification_metrics(
