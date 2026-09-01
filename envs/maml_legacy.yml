@@ -1,0 +1,29 @@
+# Environment for mAML's published CLI, run unmodified.
+#
+# scikit-learn is the hard pin: sklearn_pipeline.py passes `iid` to
+# GridSearchCV, which was removed in scikit-learn 0.24. The rest follows the
+# upstream requirements.txt era.
+#
+# skfeature must come from the original jundongl/scikit-feature, NOT the
+# pip-installable `skfeature-chappers` fork: upstream unpacks three values from
+# MRMR.mrmr, and the fork returns a single index array. Because mAML wraps each
+# pipeline step in @tryExcept, the mismatch does not crash the run - it prints
+# a traceback and silently continues without feature selection.
+name: maml_legacy
+channels: [conda-forge]
+dependencies:
+  - python=3.7
+  - scikit-learn=0.21.3
+  - numpy=1.17.*
+  - pandas=1.3.*
+  - scipy=1.3.*
+  - matplotlib=3.1.*
+  - joblib=0.13.*
+  - xgboost=0.90
+  - lightgbm=2.2.3
+  - imbalanced-learn=0.5.*
+  - pip
+  - pip:
+      - pycm==2.4
+      - plotnine==0.6.0
+      - git+https://github.com/jundongl/scikit-feature.git

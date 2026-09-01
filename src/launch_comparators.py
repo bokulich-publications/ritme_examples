@@ -25,7 +25,37 @@ from src.launch_automl import (
 )
 from src.launch_models import REPO_ROOT, USECASES, _default_slurm_time
 
-METHOD_ENVS = {"tpot": "tpot_bench", "maml": "maml_bench"}
+METHOD_ENVS = {"tpot": "tpot_bench", "maml": "maml_legacy"}
+
+# mAML runs as its published CLI rather than as a reimplementation, so its job
+# spans two environments: the CLI needs scikit-learn < 0.24, while exporting
+# the split and computing metrics need the host stack. `MAML_HOST_ENV` is the
+# environment this module is submitted from.
+MAML_HOST_ENV = "ritme_usecases"
+
+# Checkout of github.com/yangfenglong/mAML1.0. Pinned so the arm is
+# reproducible; override with RITME_MAML_SRC.
+MAML_SRC = os.environ.get("RITME_MAML_SRC", "external/mAML1.0")
+MAML_COMMIT = "8d68ecc22037d029174cac196969d1bbc4487a8f"
+
+# The published configuration (Yang & Zou, Database 2020, 10.1093/database/baaa050):
+# 20% prevalence filter, mRMR to the top 50 features, SMOTE rebalancing, and a
+# joint preprocessor x classifier search with simultaneous hyperparameter
+# tuning, scored on accuracy. Identical to all 18 runs in the repo's work.sh.
+MAML_CLI_ARGS = [
+    "--prevalence",
+    "0.2",
+    "--mrmr_n",
+    "50",
+    "--over_sampling",
+    "--search",
+    "--scoring",
+    "accuracy",
+    "--outer_cv",
+    "10",
+    "--inner_cv",
+    "5",
+]
 
 _DEFAULT_CPUS = 50
 _DEFAULT_MEM_PER_CPU_MB = 4096
@@ -116,6 +146,119 @@ def _worker_cmd(
     return common
 
 
+def _maml_payload(usecase: str, logs_path: Path, cpus: int) -> str:
+    """Shell chain for the mAML arm: export -> published CLI -> score -> collect.
+
+    Four stages across two environments, because the CLI cannot run on the host
+    stack and the metrics cannot be computed on the legacy one.
+    """
+    spec = USECASES[usecase]
+    maml_src = Path(MAML_SRC)
+    if not maml_src.is_absolute():
+        maml_src = REPO_ROOT / maml_src
+    cli = maml_src / "code" / "sklearn_pipeline.py"
+    if not cli.exists():
+        raise FileNotFoundError(
+            f"mAML checkout not found at {maml_src}. Clone it once:\n"
+            f"  git clone https://github.com/yangfenglong/mAML1.0 {maml_src}\n"
+            f"  git -C {maml_src} checkout {MAML_COMMIT}\n"
+            f"Or point RITME_MAML_SRC at an existing checkout."
+        )
+
+    run_dir = logs_path / f"{usecase}_maml_run"
+    q = shlex.quote
+
+    shared = [
+        "--usecase",
+        usecase,
+        "--task",
+        spec["task"],
+        "--run-dir",
+        str(run_dir),
+        "--out-dir",
+        str(logs_path),
+    ]
+    export = [
+        "mamba",
+        "run",
+        "-n",
+        MAML_HOST_ENV,
+        "python",
+        "-m",
+        "src.comparator_maml",
+        "export",
+        *shared,
+        "--data-splits-folder",
+        str(REPO_ROOT / spec["data_splits"]),
+        "--path-to-features",
+        str(REPO_ROOT / spec["path_ft"]),
+        "--path-to-md",
+        str(REPO_ROOT / spec["path_md"]),
+        "--target",
+        _read_target(usecase),
+    ]
+    for feat in _read_enrich_with(usecase):
+        export += ["--enrich-with", feat]
+
+    # The CLI writes its log relative to the working directory, so it runs from
+    # the run directory with absolute inputs. It is invoked through
+    # `comparator_maml_run.py`, which disables the transformer cache the
+    # pinned joblib races on at this many workers; see that module.
+    cli_step = [
+        "mamba",
+        "run",
+        "-n",
+        METHOD_ENVS["maml"],
+        "python",
+        str(REPO_ROOT / "src" / "comparator_maml_run.py"),
+        str(cli),
+        str(run_dir / f"{usecase}_train_X.csv"),
+        str(run_dir / f"{usecase}_train_Y.csv"),
+        "--outdir",
+        str(run_dir),
+        *MAML_CLI_ARGS,
+        "-j",
+        str(cpus),
+    ]
+    score = [
+        "mamba",
+        "run",
+        "-n",
+        METHOD_ENVS["maml"],
+        "python",
+        str(REPO_ROOT / "src" / "comparator_maml_score.py"),
+        "--run-dir",
+        str(run_dir),
+        "--usecase",
+        usecase,
+        "--maml-src",
+        str(maml_src),
+        "--expect-mrmr",
+    ]
+    collect = [
+        "mamba",
+        "run",
+        "-n",
+        MAML_HOST_ENV,
+        "python",
+        "-m",
+        "src.comparator_maml",
+        "collect",
+        *shared,
+    ]
+
+    join = lambda parts: " ".join(q(c) for c in parts)  # noqa: E731
+    return "; ".join(
+        [
+            "set -eu",
+            join(export),
+            f"( cd {q(str(run_dir))} && {join(cli_step)} )",
+            join(score),
+            join(collect),
+        ]
+    )
+
+
 def submit_comparator(
     usecase: str,
     *,
@@ -176,18 +319,25 @@ def submit_comparator(
         logs_path = REPO_ROOT / logs_path
     logs_path.mkdir(parents=True, exist_ok=True)
 
-    inner = _worker_cmd(
-        usecase,
-        method,
-        total_time_s,
-        logs_path,
-        seed,
-        cpus,
-        restricted_model,
-        unrestricted,
-        max_eval_time_mins,
-        checkpoint_dir,
-    )
+    if method == "maml":
+        wrapped = _maml_payload(usecase, logs_path, cpus)
+        inner = ["bash", "-c", wrapped]
+    else:
+        inner = _worker_cmd(
+            usecase,
+            method,
+            total_time_s,
+            logs_path,
+            seed,
+            cpus,
+            restricted_model,
+            unrestricted,
+            max_eval_time_mins,
+            checkpoint_dir,
+        )
+        wrapped = " ".join(
+            shlex.quote(c) for c in ["mamba", "run", "-n", METHOD_ENVS[method], *inner]
+        )
 
     if mode == "local":
         return subprocess.run(inner, cwd=REPO_ROOT, check=True)
@@ -197,10 +347,6 @@ def submit_comparator(
     job_name = f"n6_{method}_{usecase}_{task}"
     out_log = logs_path / "logs" / f"{job_name}_out.txt"
     out_log.parent.mkdir(parents=True, exist_ok=True)
-
-    wrapped = " ".join(
-        shlex.quote(c) for c in ["mamba", "run", "-n", METHOD_ENVS[method], *inner]
-    )
     sbatch_cmd = [
         "sbatch",
         f"--job-name={job_name}",
@@ -220,7 +366,7 @@ def submit_comparator(
     if sbatch_extra:
         sbatch_cmd[1:1] = list(sbatch_extra)
 
-    printable = " ".join(shlex.quote(c) for c in sbatch_cmd)
+    printable = cluster_config.redact(sbatch_cmd)
     if mode == "dry-run":
         print("[dry-run] would submit:", printable)
         return sbatch_cmd

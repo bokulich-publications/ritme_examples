@@ -206,3 +206,6 @@ pr_msg_*.md
 
 # claude
 .claude/*
+
+# third-party checkouts fetched by envs/ instructions
+external/

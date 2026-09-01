@@ -20,6 +20,7 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, Optional
 
+from src import cluster_config
 from src.launch_models import REPO_ROOT, USECASES, _default_slurm_time
 
 
@@ -198,5 +199,5 @@ def submit_automl(
         sbatch_cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
         sbatch_cmd[1:1] = list(sbatch_extra)
-    print("submitting:", " ".join(shlex.quote(c) for c in sbatch_cmd))
+    print("submitting:", cluster_config.redact(sbatch_cmd))
     return subprocess.run(sbatch_cmd, check=True)

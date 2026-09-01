@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 from typing import Optional
 
 from src.launch_models import REPO_ROOT
@@ -52,3 +53,24 @@ def slurm_account() -> Optional[str]:
 def node_constraint() -> Optional[str]:
     """Node type for ``sbatch --constraint=``. None omits the flag."""
     return get("node_constraint")
+
+
+#: sbatch flags whose values identify the institution's infrastructure.
+_SECRET_FLAGS = ("--account=", "--constraint=")
+
+
+def redact(parts) -> str:
+    """Render an sbatch command with the site-specific values masked.
+
+    The launchers echo the command they submit, and a notebook run with that
+    output committed would put the values into version control. Printing goes
+    through here so nothing has to remember to strip them.
+    """
+    out = []
+    for part in parts:
+        for flag in _SECRET_FLAGS:
+            if part.startswith(flag):
+                part = f"{flag}<from .cluster.json>"
+                break
+        out.append(shlex.quote(part))
+    return " ".join(out)

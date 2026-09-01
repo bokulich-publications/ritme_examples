@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -572,5 +571,9 @@ def submit_model(
         cmd[1:1] = list(sbatch_extra)
     cmd.append(str(TEMPLATE))
 
-    print("submitting:", " ".join(shlex.quote(c) for c in cmd))
+    # Imported here, not at module scope: cluster_config reads REPO_ROOT
+    # from this module, so a top-level import would be circular.
+    from src import cluster_config
+
+    print("submitting:", cluster_config.redact(cmd))
     return subprocess.run(cmd, env=env, check=True)
