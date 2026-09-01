@@ -6,17 +6,21 @@ Each use case has different dependencies - you can find the instructions to set 
 
 ## AutoML comparators
 
-Three generic AutoML frameworks run against the same train/test splits, metadata
-enrichment and search budget as *ritme*:
+Three generic AutoML frameworks run against the same train/test splits and
+metadata enrichment as *ritme*:
 
 | Notebook | Arms | Use cases |
 |---|---|---|
 | `use_cases/n5_generic_automl.ipynb` | auto-sklearn | u1, u2, u3 |
 | `use_cases/n6_comparator_automl.ipynb` | TPOT 0.12.2, mAML | u1–u3 (TPOT), u3 (mAML) |
 
-Each arm pins its estimator family to *ritme*'s validation-selected winner and
-leaves the preprocessing search open. Every arm gets 50 CPUs, 200 GB and an
-82 800 s budget. Outputs land in `automl/` and `comparators/` (both gitignored);
+auto-sklearn and TPOT pin their estimator family to *ritme*'s
+validation-selected winner, leave the preprocessing search open, and share
+*ritme*'s budget of 50 CPUs, 200 GB and 82 800 s. mAML runs its published
+pipeline unchanged over its own fixed grid, which is exhaustive and so takes no
+budget.
+
+Outputs land in `automl/` and `comparators/` (both gitignored);
 `evaluate_all_trials.ipynb` reads them and `src/collect_comparison.py` builds the
 comparison table, selecting *ritme*'s model on validation.
 
