@@ -58,6 +58,20 @@ def node_constraint() -> Optional[str]:
     return get("node_constraint")
 
 
+def exclude_nodes() -> list:
+    """Node names for ``sbatch --exclude=``. Empty omits the flag.
+
+    Individual node names identify the institution's hardware, so they are
+    configured alongside the account rather than written into notebooks.
+    Accepts a JSON list, or a comma-separated string from the environment.
+    """
+    raw = get("exclude_nodes")
+    if not raw:
+        value = _load().get("exclude_nodes")
+        return list(value) if isinstance(value, list) else []
+    return [n.strip() for n in str(raw).split(",") if n.strip()]
+
+
 #: sbatch flags whose values identify the institution's infrastructure.
 _SECRET_FLAGS = ("--account=", "--constraint=")
 
