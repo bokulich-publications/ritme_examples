@@ -57,6 +57,8 @@ ESTIMATOR_FOR_USECASE = {
     "u2": "sklearn.linear_model.ElasticNetCV",
     # ritme xgb_class -> the same library
     "u3": "xgboost.XGBClassifier",
+    # ritme's u4 winner by validation AUROC is xgb_class
+    "u4": "xgboost.XGBClassifier",
 }
 
 N_FOLDS = 5
@@ -67,6 +69,24 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--total-time-s", type=int, required=True)
     p.add_argument("--usecase", required=True)
     p.add_argument("--task", required=True, choices=["regression", "classification"])
+    p.add_argument(
+        "--population-size",
+        type=int,
+        default=100,
+        help="TPOT population per generation (default: TPOT's 100). A smoke "
+        "run needs a population its budget can evaluate at least once.",
+    )
+    p.add_argument(
+        "--xgb-tree-method",
+        default=None,
+        help="Override the restricted XGB estimator's tree_method (e.g. hist).",
+    )
+    p.add_argument(
+        "--xgb-threads",
+        type=int,
+        default=8,
+        help="Threads per XGB fit when --xgb-tree-method is set.",
+    )
     p.add_argument("--data-splits-folder", required=True)
     p.add_argument("--path-to-features", required=True)
     p.add_argument("--path-to-md", required=True)
@@ -421,6 +441,20 @@ def main() -> None:
             restricted_config(args.task, estimator_path),
             args.allow_infeasible_operators,
         )
+        if args.xgb_tree_method and estimator_path in config:
+            # TPOT's default XGB entry uses the exact method on one thread;
+            # at ~3x10^5 features a single fit then outlives any per-eval
+            # timeout, and stopit's async interrupt inside native XGBoost
+            # code corrupts the heap. hist + threads makes one fit feasible.
+            config[estimator_path] = {
+                **config[estimator_path],
+                "tree_method": [args.xgb_tree_method],
+                "n_jobs": [args.xgb_threads],
+            }
+            print(
+                f"XGB overrides: tree_method={args.xgb_tree_method}, "
+                f"n_jobs={args.xgb_threads}"
+            )
         model_label = estimator_path
         print(f"Restricted to {estimator_path} plus {len(config) - 1} operators")
 
@@ -432,9 +466,12 @@ def main() -> None:
         # the search once those generations are evaluated -- well inside the
         # matched budget -- and the arms are no longer budget-comparable.
         generations=args.generations,
+        population_size=args.population_size,
         cv=make_cv(args.usecase, args.task, args.seed),
+        # roc_auc is binary-only; the ovr variant matches ritme's
+        # roc_auc_macro_ovr objective on multi-class targets.
         scoring=(
-            "roc_auc"
+            ("roc_auc" if y_train.nunique() <= 2 else "roc_auc_ovr")
             if args.task == "classification"
             else "neg_root_mean_squared_error"
         ),

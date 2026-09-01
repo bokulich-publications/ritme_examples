@@ -17,9 +17,12 @@ from __future__ import annotations
 import json
 import os
 import shlex
+from pathlib import Path
 from typing import Optional
 
-from src.launch_models import REPO_ROOT
+# Derived here rather than imported from `launch_models`: that module needs
+# this one for `redact`, and importing it back would be circular.
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 CLUSTER_CONFIG_PATH = REPO_ROOT / ".cluster.json"
 

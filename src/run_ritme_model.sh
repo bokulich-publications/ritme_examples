@@ -31,11 +31,18 @@
 
 set -euo pipefail
 
+# Root of the checkout this run belongs to, for sibling helper scripts.
+# Not derivable from BASH_SOURCE: sbatch executes a copy of this script from
+# the SLURM spool directory. PATH_DATA_SPLITS is always <checkout>/use_cases/...
 : "${CONFIG?Required env var CONFIG is unset}"
 : "${PATH_MD?Required env var PATH_MD is unset}"
 : "${PATH_FT?Required env var PATH_FT is unset}"
 : "${PATH_DATA_SPLITS?Required env var PATH_DATA_SPLITS is unset}"
 : "${LOGS_DIR?Required env var LOGS_DIR is unset}"
+# Root of the checkout this run belongs to, for sibling helper scripts.
+# Not derivable from BASH_SOURCE: sbatch executes a copy of this script from
+# the SLURM spool directory. PATH_DATA_SPLITS is always <checkout>/use_cases/...
+REPO_SRC_DIR="${PATH_DATA_SPLITS%%/use_cases/*}/src"
 
 # Raise per-user soft caps so Ray's prestart workers (one per detected CPU
 # on the compute node, typically ~128) don't exhaust nproc and leave no
@@ -117,12 +124,17 @@ ritme evaluate-tuned-models "${LOGS_DIR}/${exp_tag}" \
 model_type=$(python -c "import json,sys; print(json.load(open('$CONFIG'))['ls_model_types'][0])")
 
 # 5. Bootstrap 95% CIs on test-set metrics for the tuned model. The CLI
-# auto-dispatches by model_type: regression models yield RMSE/R²/Pearson,
-# classification models yield AUROC/accuracy/F1/precision/recall. Cheap
+# auto-dispatches by the experiment's task_type: regression yields
+# RMSE/R²/Pearson, binary classification AUROC/accuracy/F1/precision/recall,
+# and a target with more than two classes the macro metric set. Cheap
 # (predict once + 1000 metric resamples) so it fits comfortably in the
 # SHAP buffer carved out of the SLURM walltime.
+#
+# Invoked by path rather than as `python -m src.bootstrap_metrics`: an editable
+# `src` install resolves to whichever checkout it was installed from, which is
+# not necessarily the checkout this template belongs to.
 echo "Running bootstrap-test-metrics (${model_type})"
-python -m src.bootstrap_metrics \
+python "${REPO_SRC_DIR}/bootstrap_metrics.py" \
   "${LOGS_DIR}/${exp_tag}" "$model_type" "${PATH_DATA_SPLITS}"
 
 # 6. Compute SHAP feature importance for the best tuned model.

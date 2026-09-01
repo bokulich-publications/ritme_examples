@@ -199,6 +199,73 @@ def _bootstrap_classification_cis(
     return out
 
 
+def _get_metrics_multiclass(model, dic_data, classes):
+    """Multi-class analog of the binary branch (u4: 15 EMPO-3 classes).
+
+    Emits the ritme-aligned metric set plus accuracy, and percentile
+    bootstrap CIs on the test split for AUROC / accuracy / macro-F1.
+    AUROC resamples that lose a class are skipped (undefined). The figure
+    shows per-class test F1 instead of a ROC curve.
+    """
+    model_type = "automl"
+    metrics = pd.DataFrame()
+    test_eval = None
+    for split, (X, y) in dic_data.items():
+        y_proba = np.asarray(model.predict_proba(X))
+        y_arr = np.asarray(y)
+        y_pred = np.asarray(classes)[y_proba.argmax(axis=1)]
+        metrics.loc[model_type, f"accuracy_{split}"] = accuracy_score(y_arr, y_pred)
+        metrics.loc[model_type, f"roc_auc_macro_ovr_{split}"] = roc_auc_score(
+            y_arr, y_proba, multi_class="ovr", average="macro", labels=classes
+        )
+        metrics.loc[model_type, f"log_loss_{split}"] = log_loss(
+            y_arr, y_proba, labels=classes
+        )
+        metrics.loc[model_type, f"f1_macro_{split}"] = f1_score(
+            y_arr, y_pred, average="macro", zero_division=0
+        )
+        metrics.loc[model_type, f"balanced_accuracy_{split}"] = balanced_accuracy_score(
+            y_arr, y_pred
+        )
+        metrics.loc[model_type, f"mcc_{split}"] = matthews_corrcoef(y_arr, y_pred)
+        if split == "test":
+            test_eval = (y_arr, y_proba, y_pred)
+
+    y_arr, y_proba, y_pred = test_eval
+    rng = np.random.default_rng(12)
+    n = y_arr.shape[0]
+    samples = {"roc_auc_macro_ovr": [], "accuracy": [], "f1_macro": []}
+    for _ in range(1000):
+        idx = rng.integers(0, n, size=n)
+        yt, yp_proba, yp = y_arr[idx], y_proba[idx], y_pred[idx]
+        if np.unique(yt).size == len(classes):
+            samples["roc_auc_macro_ovr"].append(
+                roc_auc_score(
+                    yt, yp_proba, multi_class="ovr", average="macro", labels=classes
+                )
+            )
+        samples["accuracy"].append(accuracy_score(yt, yp))
+        samples["f1_macro"].append(f1_score(yt, yp, average="macro", zero_division=0))
+    for name, vals in samples.items():
+        arr = np.asarray(vals, dtype=float)
+        metrics.loc[model_type, f"{name}_test_ci_low"] = (
+            float(np.quantile(arr, 0.025)) if arr.size else float("nan")
+        )
+        metrics.loc[model_type, f"{name}_test_ci_high"] = (
+            float(np.quantile(arr, 0.975)) if arr.size else float("nan")
+        )
+        metrics.loc[model_type, f"{name}_test_n_resamples"] = int(arr.size)
+
+    per_class = f1_score(y_arr, y_pred, average=None, labels=classes, zero_division=0)
+    fig, ax = plt.subplots(figsize=(10, 4), dpi=200)
+    ax.bar([str(c) for c in classes], per_class, color="coral")
+    ax.set_ylabel("test F1")
+    ax.set_xlabel("class")
+    ax.tick_params(axis="x", rotation=90)
+    fig.tight_layout()
+    return metrics, fig
+
+
 def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
     """Auto-sklearn classification analog of :func:`get_metrics_n_scatterplot`.
 
@@ -219,6 +286,8 @@ def get_metrics_n_roc_curve(model, X_train, y_train, X_test, y_test):
     model_type = "automl"
     dic_data = {"train": (X_train, y_train), "test": (X_test, y_test)}
     classes = list(model.classes_)
+    if len(classes) > 2:
+        return _get_metrics_multiclass(model, dic_data, classes)
 
     metrics = pd.DataFrame()
     fig, axs = plt.subplots(1, 2, figsize=(12, 5), dpi=400)

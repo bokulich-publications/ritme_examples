@@ -1,8 +1,8 @@
 """Shared data loading and output helpers for the AutoML comparator arms.
 
 Imported from several conda environments (`autosklearn`, `tpot_bench`,
-`maml_bench`) whose scikit-learn versions differ by years, so this module
-imports nothing beyond pandas and numpy.
+`ritme_usecases`) whose scikit-learn versions differ by years, so this module
+imports nothing beyond pandas and pyarrow.
 """
 
 from __future__ import annotations
@@ -11,6 +11,22 @@ import os
 from typing import Optional
 
 import pandas as pd
+import pyarrow.parquet as pq
+
+
+def _read_wide_parquet(path: str) -> pd.DataFrame:
+    """Read a parquet file whose schema exceeds pyarrow's default thrift limits.
+
+    A 3x10^5-column table (u4) overflows the default metadata size caps at
+    read time; raising them is the documented remedy and a no-op for narrow
+    tables.
+    """
+    table = pq.ParquetFile(
+        path,
+        thrift_string_size_limit=1_000_000_000,
+        thrift_container_size_limit=1_000_000_000,
+    ).read()
+    return table.to_pandas()
 
 
 def read_split(splits_dir: str, name: str) -> pd.DataFrame:
@@ -21,7 +37,7 @@ def read_split(splits_dir: str, name: str) -> pd.DataFrame:
     """
     parquet = os.path.join(splits_dir, f"{name}.parquet")
     if os.path.exists(parquet):
-        return pd.read_parquet(parquet)
+        return _read_wide_parquet(parquet)
     try:
         return pd.read_pickle(os.path.join(splits_dir, f"{name}.pkl"))
     except (ModuleNotFoundError, ImportError) as e:
@@ -89,12 +105,18 @@ def load_xy(
     train_df = read_split(splits_dir, "train_val")
     test_df = read_split(splits_dir, "test")
 
-    otu_df = pd.read_csv(path_ft, sep="\t", index_col=0)
     md_df = pd.read_csv(path_md, sep="\t", index_col=0)
-    otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
-
-    X_train = otu_df.loc[train_df.index]
-    X_test = otu_df.loc[test_df.index]
+    if str(path_ft).endswith(".biom"):
+        # u4: the pre-staged split frames already hold the features as
+        # F-prefixed relative abundances; the BIOM is never read here.
+        feature_cols = [c for c in train_df.columns if c.startswith("F")]
+        X_train = train_df[feature_cols]
+        X_test = test_df[feature_cols]
+    else:
+        otu_df = pd.read_csv(path_ft, sep="\t", index_col=0)
+        otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
+        X_train = otu_df.loc[train_df.index]
+        X_test = otu_df.loc[test_df.index]
 
     if enrich_with:
         missing = [f for f in enrich_with if f not in md_df.columns]
@@ -107,14 +129,30 @@ def load_xy(
     y_train = md_df.loc[train_df.index, target]
     y_test = md_df.loc[test_df.index, target]
     if task == "classification":
-        y_train = y_train.astype(int)
-        y_test = y_test.astype(int)
+        y_train, y_test = encode_labels(y_train, y_test)
 
     groups = None
     if group_by_column:
         groups = md_df.loc[train_df.index, group_by_column].to_numpy()
 
     return X_train, y_train, X_test, y_test, groups
+
+
+def encode_labels(y_train: pd.Series, y_test: pd.Series) -> tuple:
+    """Return integer class labels for both splits under one shared mapping.
+
+    Numeric targets pass through as int. String targets (u4's ``empo_3``) are
+    mapped to 0..k-1 in sorted order — several estimators in the comparator
+    spaces (XGBoost among them) refuse string labels, and every reported
+    metric is label-agnostic.
+    """
+    try:
+        return y_train.astype(int), y_test.astype(int)
+    except (ValueError, TypeError):
+        classes = sorted(pd.concat([y_train, y_test]).dropna().unique())
+        mapping = {c: i for i, c in enumerate(classes)}
+        print(f"Encoded {len(classes)} string classes: {mapping}")
+        return y_train.map(mapping).astype(int), y_test.map(mapping).astype(int)
 
 
 def write_metrics(
