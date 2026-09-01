@@ -201,6 +201,7 @@ comparators/*
 .cluster.json
 # any personal scratch files or folders
 x_*
+pr_msg_*.md
 ~$*
 
 # claude
