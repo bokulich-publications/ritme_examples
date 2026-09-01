@@ -1,0 +1,16 @@
+{
+  "fully_reproducible": false,
+  "group_by_column": null,
+  "max_trial_failure_rate": 0.05,
+  "model_hyperparameters": {},
+  "optuna_searchspace_sampler": "TPESampler",
+  "seed_data": 12,
+  "seed_model": 12,
+  "stratify_by": [
+    "empo_3"
+  ],
+  "target": "empo_3",
+  "task_type": "classification",
+  "time_budget_s": 82800,
+  "tracking_uri": "mlruns"
+}

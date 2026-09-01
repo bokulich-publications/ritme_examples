@@ -5,12 +5,16 @@ import os
 import subprocess
 from pprint import pprint
 
+from functools import partial
+
 import autosklearn.classification
 import autosklearn.regression
 import pandas as pd
 from autosklearn.ensembles import SingleBest
-from autosklearn.metrics import roc_auc, root_mean_squared_error
+from autosklearn.metrics import make_scorer, roc_auc, root_mean_squared_error
+from sklearn.metrics import roc_auc_score as sk_roc_auc_score
 
+from src.comparator_common import load_xy
 from src.eval_automl import (
     get_metrics_n_roc_curve,
     get_metrics_n_scatterplot,
@@ -57,6 +61,35 @@ def parse_args():
         "--single-best",
         action="store_true",
         help=("If set, restrict Auto-Sklearn to single best model - no ensembles."),
+    )
+    p.add_argument(
+        "--enrich-with",
+        dest="enrich_with",
+        action="append",
+        default=[],
+        help=(
+            "Metadata column to append to the feature table, repeatable. "
+            "Mirrors ritme's `data_enrich_with`; see src/launch_automl.py."
+        ),
+    )
+    p.add_argument(
+        "--n-jobs",
+        type=int,
+        default=-1,
+        help="auto-sklearn worker processes; cap on wide tables (memory).",
+    )
+    p.add_argument(
+        "--memory-limit-mb",
+        type=int,
+        default=24000,
+        help="auto-sklearn per-worker memory limit (MB).",
+    )
+    p.add_argument(
+        "--keep-tmp-folder",
+        default=None,
+        help="Directory for auto-sklearn's SMAC output, kept after the run "
+        "(default: a temp dir SLURM deletes). Set it on shared storage so "
+        "per-run failure statuses survive for post-mortems.",
     )
     return p.parse_args()
 
@@ -114,31 +147,30 @@ def _read_split(data_splits_folder: str, name: str) -> pd.DataFrame:
 def main():
     args = parse_args()
 
-    # load indices
-    train_df = _read_split(args.data_splits_folder, "train_val")
-    test_df = _read_split(args.data_splits_folder, "test")
-    train_idx = train_df.index.tolist()
-    test_idx = test_df.index.tolist()
-
-    # load data
-    otu_df = pd.read_csv(args.path_to_features, sep="\t", index_col=0)
-    md_df = pd.read_csv(args.path_to_md, sep="\t", index_col=0)
-    # Convert absolute abundances to relative abundances
-    otu_df = otu_df.div(otu_df.sum(axis=1), axis=0)
-    print("md_df.shape", md_df.shape)
-    print("otu_df.shape", otu_df.shape)
-
-    # subset
-    X_train = otu_df.loc[train_idx]
-    y_train = md_df.loc[train_idx, args.target]
-    X_test = otu_df.loc[test_idx]
-    y_test = md_df.loc[test_idx, args.target]
+    X_train, y_train, X_test, y_test, _ = load_xy(
+        args.path_to_features,
+        args.path_to_md,
+        args.data_splits_folder,
+        args.target,
+        args.task,
+        enrich_with=args.enrich_with,
+    )
+    print(f"Enriched with {args.enrich_with}")
+    print("X_train.shape", X_train.shape)
+    print("X_test.shape", X_test.shape)
 
     if args.task == "classification":
-        y_train = y_train.astype(int)
-        y_test = y_test.astype(int)
         default_models = CLASSIFICATION_MODELS
-        metric = roc_auc
+        if y_train.nunique() <= 2:
+            metric = roc_auc
+        else:
+            # auto-sklearn's roc_auc is binary-only; mirror ritme's
+            # macro-OvR objective for multi-class targets.
+            metric = make_scorer(
+                "roc_auc_macro_ovr",
+                partial(sk_roc_auc_score, multi_class="ovr", average="macro"),
+                needs_proba=True,
+            )
         estimator_key = "classifier"
         Estimator = autosklearn.classification.AutoSklearnClassifier
     else:
@@ -149,10 +181,15 @@ def main():
 
     common_kwargs = dict(
         time_left_for_this_task=args.total_time_s,
-        n_jobs=-1,
+        # every worker holds its own copy of the data; on wide tables the
+        # worker count, not the core count, bounds memory
+        n_jobs=args.n_jobs,
         metric=metric,
-        memory_limit=24000,
+        memory_limit=args.memory_limit_mb,
     )
+    if args.keep_tmp_folder:
+        common_kwargs["tmp_folder"] = args.keep_tmp_folder
+        common_kwargs["delete_tmp_folder_after_terminate"] = False
     if args.single_best:
         print("No ensembles - only single best model.")
         common_kwargs["ensemble_class"] = SingleBest
@@ -169,6 +206,13 @@ def main():
     automl = Estimator(include={estimator_key: list(models)}, **common_kwargs)
 
     automl.fit(X_train, y_train)
+    try:
+        stats = pd.Series(
+            [str(v.status) for v in automl.automl_.runhistory_.data.values()]
+        ).value_counts()
+        print("SMAC run statuses:\n", stats.to_string())
+    except Exception as e:  # diagnostic only; never fail the run on it
+        print(f"(could not summarise run statuses: {e})")
     print("Print model leaderboard:")
     print(automl.leaderboard())
 

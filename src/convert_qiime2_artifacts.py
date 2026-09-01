@@ -20,6 +20,7 @@ import sys
 import tempfile
 import zipfile
 from typing import Optional
+import biom
 
 
 def _extract_payload(qza_path: str, inner_filename: str, work_dir: str) -> str:
@@ -40,8 +41,6 @@ def _extract_payload(qza_path: str, inner_filename: str, work_dir: str) -> str:
 
 def convert_feature_table(qza_path: str, out_path: Optional[str] = None) -> str:
     """Convert a QIIME2 FeatureTable .qza to a samples-as-rows .tsv."""
-    import biom
-
     out_path = out_path or qza_path.replace(".qza", ".tsv")
     with tempfile.TemporaryDirectory() as work_dir:
         biom_path = _extract_payload(qza_path, "feature-table.biom", work_dir)

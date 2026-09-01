@@ -20,14 +20,38 @@ import subprocess
 from pathlib import Path
 from typing import Iterable, Optional
 
+from src import cluster_config
 from src.launch_models import REPO_ROOT, USECASES, _default_slurm_time
 
 
-def _read_target(usecase: str) -> str:
+# Enrichment fields excluded from the comparator arms, per use case.
+# u3: fit_result is a clinical screening readout for the predicted outcome.
+# Remove the entry once ritme drops it as well.
+ENRICH_EXCLUDE: dict[str, list[str]] = {"u3": ["fit_result"]}
+
+
+def _read_base_config(usecase: str) -> dict:
     spec = USECASES[usecase]
     base_prefix = spec.get("base_config_prefix", spec["config_prefix"])
     base = REPO_ROOT / spec["use_case_dir"] / "config" / f"{base_prefix}_base_tpe.json"
-    return json.loads(base.read_text())["target"]
+    return json.loads(base.read_text())
+
+
+def _read_target(usecase: str) -> str:
+    return _read_base_config(usecase)["target"]
+
+
+def _read_enrich_with(usecase: str) -> list[str]:
+    """``data_enrich_with`` from the base config, minus per-usecase exclusions.
+
+    These are the metadata covariates ritme adds to the feature table; the
+    comparator arms consume the same set so the comparison is not confounded
+    by differing inputs.
+    """
+    cfg = _read_base_config(usecase)
+    fields = cfg.get("model_hyperparameters", {}).get("data_enrich_with", []) or []
+    excluded = set(ENRICH_EXCLUDE.get(usecase, []))
+    return [f for f in fields if f not in excluded]
 
 
 def _ensure_qza_converted(usecase: str) -> None:
@@ -53,6 +77,7 @@ def _ensure_qza_converted(usecase: str) -> None:
 
 _DEFAULT_AUTOML_CPUS: int = 100
 _DEFAULT_AUTOML_MEM_PER_CPU_MB: int = 4096
+_AUTOML_ENV: str = "autosklearn"
 
 
 def submit_automl(
@@ -137,6 +162,8 @@ def submit_automl(
         "--restricted-model",
         restricted_model,
     ]
+    for feat in _read_enrich_with(usecase):
+        cmd += ["--enrich-with", feat]
 
     if mode == "local":
         return subprocess.run(cmd, cwd=REPO_ROOT, check=True)
@@ -148,7 +175,14 @@ def submit_automl(
     out_log = logs_path / "logs" / f"{job_name}_out.txt"
     out_log.parent.mkdir(parents=True, exist_ok=True)
 
-    wrapped = " ".join(shlex.quote(c) for c in cmd)
+    # Pin the environment explicitly: a job launched from another env would
+    # otherwise inherit its python and fail on `import autosklearn`.
+    # Raise the per-user process and file-descriptor caps first; auto-sklearn
+    # forks one worker per core plus a forkserver per ensemble iteration, and
+    # exhausting nproc surfaces as `EOFError: unexpected EOF` from the
+    # forkserver rather than as a clear resource error.
+    inner = " ".join(shlex.quote(c) for c in ["mamba", "run", "-n", _AUTOML_ENV, *cmd])
+    wrapped = f"ulimit -u 60000; ulimit -n 524288; {inner}"
     sbatch_cmd = [
         "sbatch",
         f"--job-name={job_name}",
@@ -165,5 +199,5 @@ def submit_automl(
         sbatch_cmd.insert(1, f"--account={slurm_account}")
     if sbatch_extra:
         sbatch_cmd[1:1] = list(sbatch_extra)
-    print("submitting:", " ".join(shlex.quote(c) for c in sbatch_cmd))
+    print("submitting:", cluster_config.redact(sbatch_cmd))
     return subprocess.run(sbatch_cmd, check=True)

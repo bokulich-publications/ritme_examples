@@ -1,0 +1,18 @@
+name: tpot_bench
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - numpy=1.26.*
+  - pandas=2.2.*
+  - scikit-learn=1.5.*
+  - scipy
+  - xgboost
+  - matplotlib
+  - seaborn
+  - pyarrow
+  # setuptools >=81 drops pkg_resources, which tpot's stopit dependency imports
+  - setuptools<81
+  - pip
+  - pip:
+      - tpot==0.12.2
+      - deap>=1.4

@@ -170,6 +170,7 @@ use_cases/u1_amplicon_age_prediction/data_splits*/*
 use_cases/u2_metagenome_ocean/data_splits*/*
 use_cases/u3_mlp_prediction/data_splits*/*
 use_cases/u3_amplicon_crc_classification/data_splits*/*
+use_cases/u4_amplicon_emp_classification/data_splits*
 # model logs
 use_cases/u1_amplicon_age_prediction/u1_rf_best_model*/*
 use_cases/u1_amplicon_age_prediction/u1_all_best_model*/*
@@ -188,15 +189,24 @@ use_cases/all_qmc_experiments*
 use_cases/automl/*
 use_cases/archive/*
 use_cases/merged_*
-use_cases/result_figures/*
+use_cases/result_figures
 use_cases/results_original_setup.csv
 use_cases/extract_all_logs_v128_project.sh
-use_cases/ritme_runs/*
+use_cases/ritme_runs
 use_cases/archive_result_figures_ritmev128/*
 automl/*
+# comparator run outputs (TPOT / mAML)
+comparators/*
+!comparators/.gitkeep
+# site-specific cluster settings (SLURM account, node type) - never commit
+.cluster.json
 # any personal scratch files or folders
 x_*
+pr_msg_*.md
 ~$*
 
 # claude
 .claude/*
+
+# third-party checkouts fetched by envs/ instructions
+external/
