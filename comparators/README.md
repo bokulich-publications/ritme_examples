@@ -21,23 +21,39 @@ mamba env create -f envs/maml.yml -p $CONDA_ENVS/maml_bench
 mamba run -n maml_bench pip install -e .
 ```
 
+## Notebooks
+
+Two notebooks launch the arms, split by launcher:
+
+| Notebook | Arms | Launcher | Kernel |
+|---|---|---|---|
+| `use_cases/n5_generic_automl.ipynb` | auto-sklearn | `src/launch_automl.py` | `autosklearn` |
+| `use_cases/n6_comparator_automl.ipynb` | TPOT, mAML | `src/launch_comparators.py` | `ritme_usecases` |
+
+Each arm runs in its own conda environment, pinned inside the job, so a
+notebook's kernel only needs to import its launcher.
+
 ## Running
 
-From the repo root, in the `ritme_usecases` env. Everything runs as SLURM jobs.
-The account and node type are site-specific: copy `.cluster.example.json` to
-`.cluster.json` (gitignored) and fill in your own, or set
-`RITME_SLURM_ACCOUNT` / `RITME_NODE_CONSTRAINT` in the environment. Leaving
-both unset omits the flags and uses the cluster's defaults.
+From the repo root. Everything runs as SLURM jobs. The account and node type
+are site-specific: copy `.cluster.example.json` to `.cluster.json` (gitignored)
+and fill in your own, or set `RITME_SLURM_ACCOUNT` / `RITME_NODE_CONSTRAINT` in
+the environment. Leaving both unset omits the flags and uses the cluster's
+defaults.
 
 ```shell
-# once: the comparator envs run NumPy 1.x and cannot read NumPy 2.x pickles
+# once, from ritme_usecases: the comparator envs run NumPy 1.x and cannot read
+# NumPy 2.x pickles
 python -m src.launch_comparators --ensure-parquet
 ```
 
-Then use `use_cases/n6_comparator_automl.ipynb`, or directly:
+Then run the notebooks above, or call the launchers directly:
 
 ```python
+from src.launch_automl import submit_automl
 from src.launch_comparators import submit_comparator
+
+submit_automl("u1", restricted_model="gradient_boosting", total_time_s=82800)
 
 for usecase in ("u1", "u2", "u3"):
     submit_comparator(usecase, method="tpot", total_time_s=82800)
@@ -47,8 +63,6 @@ submit_comparator("u3", method="maml", total_time_s=82800)
 `mode="dry-run"` prints the `sbatch` line without submitting.
 `unrestricted=True` searches TPOT's full default configuration instead of one
 estimator family.
-
-The auto-sklearn arm keeps its own launcher, `use_cases/n5_generic_automl.ipynb`.
 
 ## Outputs
 
