@@ -1,0 +1,156 @@
+{
+  "benchmark": "b2",
+  "created": "2026-08-24T00:49:33",
+  "jobs": [
+    {
+      "cores": 4,
+      "job_id": "11590424",
+      "job_name": "b2_automl_c4_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 4,
+      "job_id": "11590425",
+      "job_name": "b2_automl_c4_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 4,
+      "job_id": "11590427",
+      "job_name": "b2_automl_c4_s2",
+      "method": "automl",
+      "seed": 2
+    },
+    {
+      "cores": 8,
+      "job_id": "11590428",
+      "job_name": "b2_automl_c8_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 8,
+      "job_id": "11590429",
+      "job_name": "b2_automl_c8_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 8,
+      "job_id": "11590430",
+      "job_name": "b2_automl_c8_s2",
+      "method": "automl",
+      "seed": 2
+    },
+    {
+      "cores": 16,
+      "job_id": "11590431",
+      "job_name": "b2_automl_c16_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 16,
+      "job_id": "11590432",
+      "job_name": "b2_automl_c16_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 16,
+      "job_id": "11590433",
+      "job_name": "b2_automl_c16_s2",
+      "method": "automl",
+      "seed": 2
+    },
+    {
+      "cores": 32,
+      "job_id": "11590434",
+      "job_name": "b2_automl_c32_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 32,
+      "job_id": "11590435",
+      "job_name": "b2_automl_c32_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 32,
+      "job_id": "11590436",
+      "job_name": "b2_automl_c32_s2",
+      "method": "automl",
+      "seed": 2
+    },
+    {
+      "cores": 64,
+      "job_id": "11590437",
+      "job_name": "b2_automl_c64_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 64,
+      "job_id": "11590438",
+      "job_name": "b2_automl_c64_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 64,
+      "job_id": "11590439",
+      "job_name": "b2_automl_c64_s2",
+      "method": "automl",
+      "seed": 2
+    },
+    {
+      "cores": 128,
+      "job_id": "11590442",
+      "job_name": "b2_automl_c128_s0",
+      "method": "automl",
+      "seed": 0
+    },
+    {
+      "cores": 128,
+      "job_id": "11590444",
+      "job_name": "b2_automl_c128_s1",
+      "method": "automl",
+      "seed": 1
+    },
+    {
+      "cores": 128,
+      "job_id": "11590446",
+      "job_name": "b2_automl_c128_s2",
+      "method": "automl",
+      "seed": 2
+    }
+  ],
+  "params": {
+    "automl_memory_limit_mb": 3584,
+    "automl_model": "gradient_boosting",
+    "automl_n_jobs_per_core": 1,
+    "automl_threads_per_job": 1,
+    "cores": [
+      4,
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "cpus_per_trial": 4,
+    "mem_per_cpu_mb": 3584,
+    "runs_root": "benchmarking/runs/b2",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "time_budget_s": 7200,
+    "usecase": "u1"
+  }
+}

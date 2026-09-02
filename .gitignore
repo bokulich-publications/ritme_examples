@@ -198,6 +198,14 @@ automl/*
 # comparator run outputs (TPOT / mAML)
 comparators/*
 !comparators/.gitkeep
+# benchmark run outputs and derived results (manifests and final figures stay tracked)
+benchmarking/runs/*
+benchmarking/results/*
+!benchmarking/results/final/
+# parked ritme_efficient study - code, runs and results, all untracked
+benchmarking/excursion_ritme_efficient/
+# superseded benchmark arms, probe runs and old figures - archived, untracked
+benchmarking/archive/
 # site-specific cluster settings (SLURM account, node type) - never commit
 .cluster.json
 # any personal scratch files or folders
