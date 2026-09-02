@@ -1,0 +1,154 @@
+{
+  "benchmark": "b2",
+  "created": "2026-08-23T14:35:23",
+  "jobs": [
+    {
+      "cores": 4,
+      "experiment_tag": "b2_u1_xgb_c4_s0",
+      "job_id": "11553656",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b2_u1_xgb_c4_s1",
+      "job_id": "11553657",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b2_u1_xgb_c4_s2",
+      "job_id": "11553658",
+      "method": "ritme",
+      "seed": 2
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b2_u1_xgb_c8_s0",
+      "job_id": "11553659",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b2_u1_xgb_c8_s1",
+      "job_id": "11553660",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b2_u1_xgb_c8_s2",
+      "job_id": "11553662",
+      "method": "ritme",
+      "seed": 2
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b2_u1_xgb_c16_s0",
+      "job_id": "11553663",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b2_u1_xgb_c16_s1",
+      "job_id": "11553665",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b2_u1_xgb_c16_s2",
+      "job_id": "11553667",
+      "method": "ritme",
+      "seed": 2
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b2_u1_xgb_c32_s0",
+      "job_id": "11553668",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b2_u1_xgb_c32_s1",
+      "job_id": "11553669",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b2_u1_xgb_c32_s2",
+      "job_id": "11553670",
+      "method": "ritme",
+      "seed": 2
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b2_u1_xgb_c64_s0",
+      "job_id": "11553671",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b2_u1_xgb_c64_s1",
+      "job_id": "11553672",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b2_u1_xgb_c64_s2",
+      "job_id": "11553673",
+      "method": "ritme",
+      "seed": 2
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b2_u1_xgb_c128_s0",
+      "job_id": "11553674",
+      "method": "ritme",
+      "seed": 0
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b2_u1_xgb_c128_s1",
+      "job_id": "11553679",
+      "method": "ritme",
+      "seed": 1
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b2_u1_xgb_c128_s2",
+      "job_id": "11553681",
+      "method": "ritme",
+      "seed": 2
+    }
+  ],
+  "params": {
+    "automl_memory_limit_mb": 3072,
+    "automl_model": "gradient_boosting",
+    "cores": [
+      4,
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "cpus_per_trial": 4,
+    "mem_per_cpu_mb": 3584,
+    "runs_root": "benchmarking/runs/b2",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "time_budget_s": 7200,
+    "usecase": "u1"
+  }
+}

@@ -1,0 +1,344 @@
+{
+  "benchmark": "b4",
+  "created": "2026-09-02T07:34:30",
+  "jobs": [
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_automl_c4_s0",
+      "job_id": "12482523",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_automl_c4_s1",
+      "job_id": "12482524",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_automl_c4_s2",
+      "job_id": "12482525",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_automl_c8_s0",
+      "job_id": "12482526",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_automl_c8_s1",
+      "job_id": "12482527",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_automl_c8_s2",
+      "job_id": "12482528",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_automl_c16_s0",
+      "job_id": "12482540",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_automl_c16_s1",
+      "job_id": "12482542",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_automl_c16_s2",
+      "job_id": "12482543",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_automl_c32_s0",
+      "job_id": "12482544",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_automl_c32_s1",
+      "job_id": "12482545",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_automl_c32_s2",
+      "job_id": "12482546",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_automl_c64_s0",
+      "job_id": "12482547",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_automl_c64_s1",
+      "job_id": "12482549",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_automl_c64_s2",
+      "job_id": "12482550",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_automl_c128_s0",
+      "job_id": "12482551",
+      "method": "automl",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_automl_c128_s1",
+      "job_id": "12482552",
+      "method": "automl",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_automl_c128_s2",
+      "job_id": "12482553",
+      "method": "automl",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_tpot_c4_s0",
+      "job_id": "12482554",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_tpot_c4_s1",
+      "job_id": "12482555",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 4,
+      "experiment_tag": "b4_u1_tpot_c4_s2",
+      "job_id": "12482556",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_tpot_c8_s0",
+      "job_id": "12482557",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_tpot_c8_s1",
+      "job_id": "12482558",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 8,
+      "experiment_tag": "b4_u1_tpot_c8_s2",
+      "job_id": "12482559",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_tpot_c16_s0",
+      "job_id": "12482560",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_tpot_c16_s1",
+      "job_id": "12482561",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 16,
+      "experiment_tag": "b4_u1_tpot_c16_s2",
+      "job_id": "12482562",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_tpot_c32_s0",
+      "job_id": "12482563",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_tpot_c32_s1",
+      "job_id": "12482564",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 32,
+      "experiment_tag": "b4_u1_tpot_c32_s2",
+      "job_id": "12482565",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_tpot_c64_s0",
+      "job_id": "12482566",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_tpot_c64_s1",
+      "job_id": "12482567",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 64,
+      "experiment_tag": "b4_u1_tpot_c64_s2",
+      "job_id": "12482568",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_tpot_c128_s0",
+      "job_id": "12482569",
+      "method": "tpot",
+      "seed": 0,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_tpot_c128_s1",
+      "job_id": "12482570",
+      "method": "tpot",
+      "seed": 1,
+      "usecase": "u1"
+    },
+    {
+      "cores": 128,
+      "experiment_tag": "b4_u1_tpot_c128_s2",
+      "job_id": "12482571",
+      "method": "tpot",
+      "seed": 2,
+      "usecase": "u1"
+    }
+  ],
+  "params": {
+    "automl_model": {
+      "u1": "gradient_boosting",
+      "u2": "sgd",
+      "u3": "gradient_boosting"
+    },
+    "comparator_source_commit": "8345e76",
+    "cores": [
+      4,
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "cpus_per_trial": 4,
+    "enrich_with": {
+      "u1": [
+        "health_status_at_sampling",
+        "diet_milk",
+        "diet_weaning",
+        "abx_7d_prior"
+      ]
+    },
+    "mem_per_cpu_mb": 3584,
+    "method_usecases": {
+      "maml": [
+        "u3"
+      ]
+    },
+    "ritme_model": {
+      "u1": "xgb",
+      "u2": "linreg",
+      "u3": "xgb_class"
+    },
+    "runs_root": "benchmarking/runs/b4",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "threads_per_worker": 1,
+    "time_budget_s": 7200,
+    "tpot_max_eval_time_mins": 130,
+    "tpot_model": {
+      "u1": "xgboost.XGBRegressor",
+      "u2": "sklearn.linear_model.ElasticNetCV",
+      "u3": "xgboost.XGBClassifier"
+    }
+  }
+}

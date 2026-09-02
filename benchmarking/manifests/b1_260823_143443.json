@@ -1,0 +1,52 @@
+{
+  "benchmark": "b1",
+  "created": "2026-08-23T14:34:43",
+  "jobs": [
+    {
+      "experiment_tag": "b1_u1_xgb_tpe_s0",
+      "job_id": "11553642",
+      "sampler": "tpe",
+      "seed": 0
+    },
+    {
+      "experiment_tag": "b1_u1_xgb_tpe_s1",
+      "job_id": "11553643",
+      "sampler": "tpe",
+      "seed": 1
+    },
+    {
+      "experiment_tag": "b1_u1_xgb_tpe_s2",
+      "job_id": "11553645",
+      "sampler": "tpe",
+      "seed": 2
+    },
+    {
+      "experiment_tag": "b1_u1_xgb_random_s0",
+      "job_id": "11553646",
+      "sampler": "random",
+      "seed": 0
+    },
+    {
+      "experiment_tag": "b1_u1_xgb_random_s1",
+      "job_id": "11553647",
+      "sampler": "random",
+      "seed": 1
+    },
+    {
+      "experiment_tag": "b1_u1_xgb_random_s2",
+      "job_id": "11553648",
+      "sampler": "random",
+      "seed": 2
+    }
+  ],
+  "params": {
+    "cpus": 50,
+    "logs_dir": "benchmarking/runs/b1",
+    "max_concurrent_trials": 10,
+    "mem_per_cpu_mb": 4096,
+    "model_type": "xgb",
+    "time_budget_s": 43200,
+    "usecase": "u1",
+    "warmup_job_id": "11553649"
+  }
+}
