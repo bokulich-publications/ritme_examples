@@ -27,7 +27,14 @@ REGRESSION_MODELS = [
     "random_forest",
     "sgd",
 ]
-CLASSIFICATION_MODELS = ["gradient_boosting", "mlp", "random_forest"]
+
+CLASSIFICATION_MODELS = [
+    "gradient_boosting",
+    "liblinear_svc",
+    "mlp",
+    "random_forest",
+    "sgd",
+]
 
 
 def parse_args():

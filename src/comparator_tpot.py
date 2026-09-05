@@ -55,8 +55,11 @@ ESTIMATOR_FOR_USECASE = {
     # ElasticNetCV is the direct analogue. NB it does not expose alpha - it picks
     # it by internal CV over a 100-point path, so its alpha search is not reduced.
     "u2": "sklearn.linear_model.ElasticNetCV",
-    # ritme xgb_class -> the same library
-    "u3": "xgboost.XGBClassifier",
+    # ritme's u3 winner by validation AUROC is logreg (u3_logreg_tpe_no_fit,
+    # 1-SE rule) since fit_result was dropped; LogisticRegression is the direct
+    # analogue. The former XGBClassifier pin is archived under
+    # comparators/archive_u3_xgb_pinned/.
+    "u3": "sklearn.linear_model.LogisticRegression",
     # ritme's u4 winner by validation AUROC is xgb_class
     "u4": "xgboost.XGBClassifier",
 }
