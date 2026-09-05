@@ -206,6 +206,11 @@ benchmarking/results/*
 benchmarking/excursion_ritme_efficient/
 # superseded benchmark arms, probe runs and old figures - archived, untracked
 benchmarking/archive/
+# rendered publication figures - the make_*.py scripts stay tracked, the
+# renders regenerate from them
+final_figures/*.eps
+final_figures/*.pdf
+final_figures/*.png
 # site-specific cluster settings (SLURM account, node type) - never commit
 .cluster.json
 # any personal scratch files or folders
