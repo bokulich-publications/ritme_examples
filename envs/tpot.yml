@@ -1,3 +1,7 @@
+# Environment for the TPOT comparator arm.
+#
+# tpot is the hard pin: `pip install tpot` resolves to the 1.x rewrite, a
+# different engine from the genetic-programming method cited.
 name: tpot_bench
 channels: [conda-forge]
 dependencies:

@@ -6,13 +6,13 @@ Guidelines for AI coding agents working on this repository.
 
 ## Project overview
 
-This repos displays the power of **ritme** in three example usecases demonstrated in an accompanying mansucript. **ritme** is a Python package for finding the best microbial feature representation and model algorithm for a predictive task on next-generation sequencing data (regression or classification). Microbial features are engineered accounting for their statistical characteristics (compositionality, high dimensionality, hierarchical relationships, sparsity). **Ritme** lives in this open-source repos: https://github.com/adamovanja/ritme.
+This repository displays the power of **ritme** in three example use cases demonstrated in an accompanying manuscript. **ritme** is a Python package for finding the best microbial feature representation and model algorithm for a predictive task on next-generation sequencing data (regression or classification). Microbial features are engineered accounting for their statistical characteristics (compositionality, high dimensionality, hierarchical relationships, sparsity). **Ritme** lives in this open-source repository: https://github.com/adamovanja/ritme.
 
 ## The usecases
-This repos displays 3 use cases: u1_amplicon_age_prediction (regression), u2_metagenome_ocean (regression) & u3_amplicon_crc_classification (binary classification). For each of these first the data is processed according to the original studies' pipeline in `n1_data.ipynb` (with its own conda env). Then ritme is used to perform a selected prediction task in `n2_run_ritme_model.ipynb` and additionally the original modelling approach is launched in `n4_original_setup.iypnb`. After the respective `n2_` notebooks ran, all trials are evaluated in `evaluate_all_trials.ipynb`.
+This repository displays 3 use cases: u1_amplicon_age_prediction (regression), u2_metagenome_ocean (regression) & u3_amplicon_crc_classification (binary classification). For each of these first the data is processed according to the original studies' pipeline in `n1_data.ipynb` (with its own conda env). Then ritme is used to perform a selected prediction task in `n2_run_ritme_model.ipynb` and additionally the original modelling approach is launched in `n4_original_setup.ipynb`. After the respective `n2_` notebooks ran, all trials are evaluated in `evaluate_all_trials.ipynb`.
 
 A legacy regression use case (formerly `u3`: `u3_mlp_prediction`, microbial-load prediction from Nishijima 2024) is parked under the `u3_legacy` USECASES key while the new `u3` (CRC classification) is evaluated head-to-head; it will be removed once that comparison is complete.
-Additionally, to the ritme comparisons also autoML comparisons are launched for all three usecases in `n5_generic_automl.ipynb` (regression for u1–u2, binary classification for u3 — task auto-dispatched from `USECASES[usecase]["task"]` in `src/launch_models.py`).
+In addition to the ritme comparisons, autoML comparisons are launched for all three use cases in `n5_generic_automl.ipynb` (regression for u1–u2, binary classification for u3 — task auto-dispatched from `USECASES[usecase]["task"]` in `src/launch_models.py`).
 
 ## Ritme's data flow
 
@@ -30,8 +30,8 @@ Notebooks and associated scripts/modules of the following notebooks rely on ritm
 
 
 ## Important best practices
-When performing and changes or additions to this repos make sure to follow best practices in software development. making sure all added code is clearly structured, only contains comments when really needed.
-When testing new functionality always do it in an activated conda environment called, the one defined for this notebook. Never install packages in the base environment!
+When making changes or additions to this repository, follow best practices in software development: make sure all added code is clearly structured and only contains comments when really needed.
+When testing new functionality always do it in an activated conda environment - the one defined for that notebook. Never install packages in the base environment!
 
 ## Rules
 
@@ -44,10 +44,10 @@ When testing new functionality always do it in an activated conda environment ca
 - PR title: stick to the naming of former PRs with the prefix (FIX, ADD, ENH, MAINT, ...) in this project.
 
 ### Testing
-- Since this repos is a demonstration - no unit tests need to be implemented.
+- Since this repository is a demonstration - no unit tests need to be implemented.
 
 ### Formatting
-- Ensure all code is formatted according to the pre-commit hooks in this repos.
+- Ensure all code is formatted according to the pre-commit hooks in this repository.
 
 ### Commits
 - Imperative form, matching existing `git log` style.

@@ -2,12 +2,12 @@
 #
 # scikit-learn is the hard pin: sklearn_pipeline.py passes `iid` to
 # GridSearchCV, which was removed in scikit-learn 0.24. The rest follows the
-# upstream requirements.txt era.
+# upstream requirements.txt of that era.
 #
 # skfeature must come from the original jundongl/scikit-feature, NOT the
 # pip-installable `skfeature-chappers` fork: upstream unpacks three values from
 # MRMR.mrmr, and the fork returns a single index array. Because mAML wraps each
-# pipeline step in @tryExcept, the mismatch does not crash the run - it prints
+# pipeline step in @tryExcept, the mismatch does not crash the run -- it prints
 # a traceback and silently continues without feature selection.
 name: maml_legacy
 channels: [conda-forge]
