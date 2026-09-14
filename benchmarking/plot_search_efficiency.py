@@ -1,9 +1,9 @@
-"""B1 figure (B1_final): best running validation RMSE over wall-clock time.
+"""Search-efficiency figure: best running validation RMSE over wall-clock time.
 
 One line per arm (median across seeds, min-max band) plus a vertical
 marker at the end of TPE's adaptive random warm-up.
 
-Usage: python -m benchmarking.plot_b1_final [--smoke]
+Usage: python -m benchmarking.plot_search_efficiency [--smoke]
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from benchmarking.plotting import (
     ARM_LABELS,
     ARM_LINESTYLES,
     apply_style,
+    draw_band,
     save_figure,
 )
 
@@ -59,7 +60,7 @@ def main() -> None:
     p.add_argument(
         "--out-name",
         default=None,
-        help="figure basename (default: b1_final; smoke: b1_smoke_search_efficiency)",
+        help="figure basename (default: search_efficiency)",
     )
     p.add_argument(
         "--out-dir",
@@ -71,7 +72,9 @@ def main() -> None:
 
     default_dir = DATA_DIR if args.smoke else FINAL_DIR
     out_dir = Path(args.out_dir) if args.out_dir else default_dir
-    default_name = f"{benchmark}_search_efficiency" if args.smoke else "b1_final"
+    default_name = (
+        f"{benchmark}_search_efficiency" if args.smoke else "search_efficiency"
+    )
     out_name = args.out_name or default_name
     trials = pd.read_csv(DATA_DIR / f"{benchmark}_trials.csv")
     warmup_file = RUNS_DIR / ("b1_smoke" if args.smoke else "b1") / "warmup.json"
@@ -102,17 +105,16 @@ def main() -> None:
             linestyle=ARM_LINESTYLES[sampler],
             label=ARM_LABELS[sampler],
         )
-        ax.fill_between(
+        draw_band(
+            ax,
             grid_h[scored],
             np.nanmin(curves[:, scored], axis=0),
             np.nanmax(curves[:, scored], axis=0),
-            color=color,
-            alpha=0.2,
-            linewidth=0,
+            color,
         )
 
     ax.set_xlabel("Wall-clock time since first trial start (h)")
-    ax.set_ylabel("Best running\nvalidation RMSE (\u2193)")
+    ax.set_ylabel("Best validation RMSE (\u2193)")
     legend = ax.legend(title="Sampler", frameon=False)
 
     if warmup_file.exists():
@@ -122,9 +124,7 @@ def main() -> None:
             ax.axvline(marker_s / 3600, color="dimgray", linestyle="--", linewidth=1)
             # The note is centred on the legend's vertical midpoint.
             fig.canvas.draw()
-            legend_box = legend.get_window_extent().transformed(
-                ax.transAxes.inverted()
-            )
+            legend_box = legend.get_window_extent().transformed(ax.transAxes.inverted())
             legend_mid = (legend_box.y0 + legend_box.y1) / 2
             ax.text(
                 marker_s / 3600,

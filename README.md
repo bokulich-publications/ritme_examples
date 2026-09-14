@@ -28,11 +28,17 @@ The SLURM account and node type are site-specific: copy `.cluster.example.json`
 to `.cluster.json` (gitignored), or set `RITME_SLURM_ACCOUNT` /
 `RITME_NODE_CONSTRAINT`. Leaving both unset uses the cluster's defaults.
 
+## Manuscript figures
+
+The manuscript's main and supplementary figures are generated in
+`final_figures/`, one script per figure. Each writes `.eps`, `.pdf` and `.png`
+beside itself (gitignored - the scripts regenerate them) and reads the trial
+logs the use-case notebooks produced.
+
 ## Benchmarks
 
-The computational-efficiency benchmarks of the manuscript (search efficiency,
-resource scaling and the resource cost of the auto-sklearn comparison) live in
-`benchmarking/` - see `benchmarking/README.md`.
+The computational-efficiency benchmarks of the manuscript (search efficiency
+and compute scaling) live in `benchmarking/` - see `benchmarking/README.md`.
 
 ## Contact
 
