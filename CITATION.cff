@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use these workflows, please cite the ritme manuscript (preferred-citation) and this repository."
+title: "ritme_examples: reproducible use cases accompanying the ritme manuscript"
+type: software
+authors:
+  - family-names: Adamov
+    given-names: Anja
+    affiliation: "ETH Zurich"
+repository-code: "https://github.com/bokulich-publications/ritme_examples"
+license: BSD-3-Clause
+doi: 10.5281/zenodo.23534547
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23534547
+    description: "Zenodo archive of this repository (concept DOI, resolves to the latest release)"
+keywords:
+  - microbiome
+  - machine learning
+  - AutoML
+  - feature representation
+  - ritme
+preferred-citation:
+  type: article
+  title: "Target-driven optimization of feature representation and model selection for microbiome sequencing data with ritme"
+  authors:
+    - family-names: Adamov
+      given-names: Anja
+    - family-names: Müller
+      given-names: Christian L.
+    - family-names: Bokulich
+      given-names: Nicholas A.
+  journal: bioRxiv
+  year: 2025
+  doi: 10.64898/2025.12.08.693045
+  url: "https://doi.org/10.64898/2025.12.08.693045"

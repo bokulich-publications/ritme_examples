@@ -1,4 +1,6 @@
 # ritme_examples
+[![DOI](https://zenodo.org/badge/869604968.svg)](https://doi.org/10.5281/zenodo.23534547)
+
 This repos contains fully reproducible workflows to reproduce the use cases accompanying the [*ritme* manuscript](https://doi.org/10.64898/2025.12.08.693045).
 
 ## Setup
@@ -39,6 +41,14 @@ logs the use-case notebooks produced.
 
 The computational-efficiency benchmarks of the manuscript (search efficiency
 and compute scaling) live in `benchmarking/` - see `benchmarking/README.md`.
+
+## Citation
+
+If you use these workflows in your research, please cite the *ritme* manuscript:
+
+Adamov, A., Mueller, C. L., & Bokulich, N. (2025). Target-driven optimization of feature representation and model selection for microbiome sequencing data with ritme. bioRxiv, 2025.12.08.693045. https://doi.org/10.64898/2025.12.08.693045
+
+The code in this repository is archived on Zenodo under https://doi.org/10.5281/zenodo.23534547 (see also `CITATION.cff`).
 
 ## Contact
 
