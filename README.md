@@ -1,7 +1,7 @@
 # ritme_examples
 [![DOI](https://zenodo.org/badge/869604968.svg)](https://doi.org/10.5281/zenodo.23534547)
 
-This repos contains fully reproducible workflows to reproduce the use cases accompanying the [*ritme* publication](https://doi.org/10.1016/j.patter.2026.101731).
+This repos contains fully reproducible workflows to reproduce the use cases accompanying the [*ritme* publication](https://www.cell.com/patterns/fulltext/S2666-3899(26)00240-0).
 
 ## Setup
 Each use case has different dependencies - you can find the instructions to set up the necessary conda environments at the start of each notebook.
@@ -46,7 +46,7 @@ and compute scaling) live in `benchmarking/` - see `benchmarking/README.md`.
 
 If you use these workflows in your research, please cite the *ritme* manuscript:
 
-Adamov, A., Mueller, C. L., & Bokulich, N. (2026). Target-driven optimization of feature representation and model selection for microbiome sequencing data with ritme. Patterns, 101731. https://doi.org/10.1016/j.patter.2026.101731
+Adamov, A., Mueller, C. L., & Bokulich, N. (2026). Target-driven optimization of feature representation and model selection for microbiome sequencing data with ritme. Patterns, 101731. https://www.cell.com/patterns/fulltext/S2666-3899(26)00240-0
 
 The code in this repository is archived on Zenodo under https://doi.org/10.5281/zenodo.23534547 (see also `CITATION.cff`).
 
