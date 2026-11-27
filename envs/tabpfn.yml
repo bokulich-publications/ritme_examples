@@ -1,0 +1,32 @@
+# Environment for the TabPFN comparator arm (CPU inference).
+#
+# tabpfn is the hard pin. Its dependencies are listed as conda packages so pip
+# installs tabpfn alone; the CPU build of PyTorch keeps the environment small.
+name: tabpfn
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - pytorch-cpu>=2.5
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - matplotlib
+  - seaborn
+  - pyarrow
+  - lightgbm>=4.4
+  - skrub>=0.7,<0.11
+  - safetensors
+  - einops
+  - huggingface_hub
+  - pydantic>=2.8
+  - pydantic-settings>=2.10
+  - joblib
+  - tqdm
+  - filelock
+  - typing_extensions
+  - ipykernel
+  - papermill
+  - pip
+  - pip:
+      - tabpfn==9.2.0

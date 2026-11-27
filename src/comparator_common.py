@@ -50,7 +50,11 @@ def read_split(splits_dir: str, name: str) -> pd.DataFrame:
 
 
 def _is_categorical(col: pd.Series) -> bool:
-    return isinstance(col.dtype, pd.CategoricalDtype) or col.dtype == object
+    # pandas >= 3 reads text as the `str` dtype rather than object.
+    return (
+        isinstance(col.dtype, (pd.CategoricalDtype, pd.StringDtype))
+        or col.dtype == object
+    )
 
 
 def enrich_categories(md_df: pd.DataFrame, enrich_with: list) -> dict:
